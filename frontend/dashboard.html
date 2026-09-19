@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarbonWise - Dashboard</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <div class="app-sidebar">
+            <a href="index.html" class="sidebar-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="#1A1A1A"/>
+                </svg>
+            </a>
+            <div class="sidebar-menu">
+                <a class="nav-link active" data-target="tab-dashboard">Dashboard</a>
+                <a class="nav-link" data-target="tab-consumption">Consumption</a>
+                <a class="nav-link" data-target="tab-settings">Settings</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="app-main">
+
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="page-header">
+                    <div>
+                        <h2>welcome back, soham!</h2>
+                        <p>here's your environmental overview.</p>
+                    </div>
+                    <div class="header-date">APRIL 2026</div>
+                </div>
+
+                <div class="dash-grid-top">
+                    <!-- Transport -->
+                    <div class="card card-transport" style="border-radius: 2px;">
+                        <div class="card-title" style="color: var(--text-main);">transport</div>
+                        <div class="chart-bars">
+                            <div class="bar" style="height: 5%"></div>
+                            <div class="bar" style="height: 30%"></div>
+                            <div class="bar" style="height: 50%"></div>
+                            <div class="bar" style="height: 60%"></div>
+                            <div class="bar" style="height: 20%"></div>
+                            <div class="bar" style="height: 50%"></div>
+                        </div>
+                        <div class="card-value">2.20 kgCO<sub>2</sub>e</div>
+                    </div>
+                    <!-- Food -->
+                    <div class="card card-grey" style="border-radius: 2px;">
+                        <div class="card-title">food</div>
+                        <div class="chart-bars">
+                            <div class="bar" style="height: 5%"></div>
+                            <div class="bar" style="height: 30%"></div>
+                            <div class="bar" style="height: 50%"></div>
+                            <div class="bar" style="height: 60%"></div>
+                            <div class="bar" style="height: 20%"></div>
+                            <div class="bar" style="height: 45%"></div>
+                        </div>
+                        <div class="card-value">7.52 kgCO<sub>2</sub>e</div>
+                    </div>
+                    <!-- Shopping -->
+                    <div class="card card-grey" style="border-radius: 2px;">
+                        <div class="card-title">shopping</div>
+                        <div class="chart-bars">
+                            <div class="bar" style="height: 5%"></div>
+                            <div class="bar" style="height: 25%"></div>
+                            <div class="bar" style="height: 40%"></div>
+                            <div class="bar" style="height: 55%"></div>
+                            <div class="bar" style="height: 20%"></div>
+                            <div class="bar" style="height: 45%"></div>
+                        </div>
+                        <div class="card-value">3.62 kgCO<sub>2</sub>e</div>
+                    </div>
+                    <!-- Energy -->
+                    <div class="card card-grey" style="border-radius: 2px;">
+                        <div class="card-title">energy</div>
+                        <div class="chart-bars">
+                            <div class="bar" style="height: 5%"></div>
+                            <div class="bar" style="height: 25%"></div>
+                            <div class="bar" style="height: 45%"></div>
+                            <div class="bar" style="height: 60%"></div>
+                            <div class="bar" style="height: 20%"></div>
+                            <div class="bar" style="height: 45%"></div>
+                        </div>
+                        <div class="card-value">8.21 kgCO<sub>2</sub>e</div>
+                    </div>
+                </div>
+
+                <div class="dash-grid-bottom">
+                    <!-- Total Footprint -->
+                    <div class="stat-card">
+                        <div class="stat-card-title">total carbon footprint</div>
+                        <div class="stat-card-value" style="font-size: 4rem;">32.6 <span>kg CO<sub>2</sub>e</span></div>
+
+                        <div class="footprint-bars-container">
+                            <div class="footprint-bars">
+                                <div class="fb-bar" style="height: 40px;"></div>
+                                <div class="fb-bar" style="height: 70px;"></div>
+                                <div class="fb-bar active" style="height: 35px;"></div>
+                            </div>
+                            <div class="footprint-labels">
+                                <div class="fb-text">
+                                    <div class="fb-label">materials</div>
+                                    <div class="fb-value">2.20 kgCO<sub>2</sub>e</div>
+                                </div>
+                                <div class="fb-text">
+                                    <div class="fb-label">transport</div>
+                                    <div class="fb-value">1.15 kgCO<sub>2</sub>e</div>
+                                </div>
+                                <div class="fb-text">
+                                    <div class="fb-label">packaging</div>
+                                    <div class="fb-value">0.75 kgCO<sub>2</sub>e</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plantander -->
+                    <div class="stat-card" style="padding-top: 32px;">
+                        <div class="stat-card-title" style="font-weight: 300; font-size: 1.1rem; color: #666; margin-bottom: 24px;">plantander</div>
+                        <div class="stat-card-value" style="display: flex; align-items: baseline; gap: 8px;">
+                            <span style="font-size: 4.5rem; font-weight: 500; color: #1a1a1a; line-height: 1;">19</span>
+                            <span style="font-size: 1.1rem; color: #888;">September, 2026</span>
+                        </div>
+                        <div class="calendar-days" style="margin-top:32px;">
+                            <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                        </div>
+                        <div class="calendar-grid">
+                            <!-- Row 1 -->
+                            <div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot tree"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div>
+                            <!-- Row 2 -->
+                            <div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot dark"></div><div class="cal-dot tree"></div><div class="cal-dot dark"></div>
+                            <!-- Row 3 -->
+                            <div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot empty"></div><div class="cal-dot"></div><div class="cal-dot tree"></div><div class="cal-dot dark"></div>
+                            <!-- Row 4 -->
+                            <div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot tree"></div><div class="cal-dot"></div>
+                            <!-- Row 5 -->
+                            <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div>
+                        </div>
+                    </div>
+
+                    <!-- Carbon Consumption -->
+                    <div class="stat-card">
+                        <div class="stat-card-title">carbon consumption</div>
+                        <div class="consumption-stat mt-4">
+                            <div class="large-value small-num">5.3 <span>gha</span></div>
+                            <div class="sub-stat" style="display:flex; justify-content:space-between;">
+                                <span>52% of sustainable limit</span>
+                                <span>target: 4.0 gha</span>
+                            </div>
+                            <div class="progress-bar-container" style="height: 20px; border-radius: 0; background: #e8edea; margin-top: 16px;">
+                                <div class="progress-bar" style="width: 52%; border-radius: 0;"></div>
+                            </div>
+                        </div>
+
+                        <hr style="border:0; border-top: 1px solid var(--border-color); margin: 32px 0;">
+
+                        <div class="consumption-stat">
+                            <div class="large-value small-num">8.2 <span>metric tons CO<sub>2</sub></span></div>
+                            <div class="sub-stat" style="display:flex; justify-content:space-between;">
+                                <span>28% of sustainable limit</span>
+                                <span>target: 6.0 mtCO2</span>
+                            </div>
+                            <div class="progress-bar-container" style="height: 20px; border-radius: 0; background: #e8edea; margin-top: 16px;">
+                                <div class="progress-bar" style="width: 28%; background: var(--accent-green); border-radius: 0;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consumption Tab -->
+            <div id="tab-consumption" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h2>Consumption tracker</h2>
+                        <p>Log daily choices and keep your footprint in view.</p>
+                    </div>
+                </div>
+
+                <div class="consumption-stats">
+                    <div class="stat-card">
+                        <div class="stat-card-title">this month</div>
+                        <div class="stat-card-value">2.1<span>mtCO2</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">logged today</div>
+                        <div class="stat-card-value">3<span>entries</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">monthly target</div>
+                        <div class="stat-card-value">4.0<span>gha</span></div>
+                    </div>
+                </div>
+
+                <div class="recent-activity-card">
+                    <h3>Recent activity</h3>
+                    <div class="activity-tabs">
+                        <span class="active">Home energy</span>
+                        <span>Transportation</span>
+                        <span>Lifestyle</span>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Electricity usage</label>
+                        <input type="text" value="36">
+                    </div>
+                    <div class="form-row">
+                        <label>Natural gas</label>
+                        <input type="text" value="1.5">
+                    </div>
+                    <div class="form-row">
+                        <label>Use renewables?</label>
+                        <select>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem; margin-top: 16px;">Calculate & Add Footprint</button>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="tab-settings" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h2>Settings</h2>
+                        <p>Fine-tune your profile, limits, and measurement preferences.</p>
+                    </div>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3>Profile</h3>
+                        <p style="color: var(--text-muted);">Soham Gore • Mumbai, India</p>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Impact goals</h3>
+                        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px;">Monthly sustainable limit</p>
+                        <input type="text" value="4.0 gha per month">
+                    </div>
+                </div>
+
+                <div class="session-card">
+                    <div>
+                        <h3>Session</h3>
+                        <p style="color: var(--text-muted);">Sign out securely from this device.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="window.location.href='index.html'" style="padding: 10px 24px;">Log out</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

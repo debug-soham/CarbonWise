@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarbonWise - Sign In</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="auth-page">
+        <div class="auth-container">
+
+            <a href="index.html" class="auth-logo">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z"/>
+                </svg>
+                <span>CARBONWISE</span>
+            </a>
+
+            <h1>Welcome back</h1>
+            <p class="subtitle">Sign in to see your personal carbon insight.</p>
+
+            <div class="auth-info-box">
+                Your personal insight stays private and secure.
+            </div>
+
+            <form class="auth-form" id="login-form">
+                <div class="form-group">
+                    <label>Email address</label>
+                    <input type="email" id="login-email" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-submit">Sign In</button>
+            </form>
+
+            <div class="auth-links">
+                <div class="link-group">
+                    Forgot your password? <a href="#">Contact our support team.</a>
+                </div>
+                <div class="link-group">
+                    New to CarbonWise? <a href="register.html">Create your account</a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
