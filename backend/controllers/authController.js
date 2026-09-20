@@ -1,32 +1,110 @@
-// Dummy in-memory database for demonstration
-const users = [];
+const db = require('../db');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-exports.register = (req, res) => {
+const JWT_SECRET = 'super-secret-jwt-key-carbonwise'; // In production, use environment variables
+
+// Register a new user
+exports.register = async (req, res) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-        return res.status(400).json({ message: 'All fields are required.' });
+        return res.status(400).json({ message: 'Please provide all required fields.' });
     }
 
-    const userExists = users.find(u => u.email === email);
-    if (userExists) {
-        return res.status(400).json({ message: 'User already exists.' });
+    try {
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert into database
+        const sql = `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
+        db.run(sql, [name, email, hashedPassword], function (err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(400).json({ message: 'User with this email already exists.' });
+                }
+                console.error(err);
+                return res.status(500).json({ message: 'Internal server error.' });
+            }
+
+            // Generate token
+            const token = jwt.sign({ id: this.lastID, name }, JWT_SECRET, { expiresIn: '7d' });
+
+            res.status(201).json({
+                message: 'User registered successfully!',
+                token,
+                user: { id: this.lastID, name, email }
+            });
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error.' });
     }
-
-    const newUser = { id: Date.now(), name, email, password }; // In a real app, hash the password!
-    users.push(newUser);
-
-    res.status(201).json({ message: 'User registered successfully!', user: { id: newUser.id, name, email } });
 };
 
-exports.login = (req, res) => {
+// Login existing user
+exports.login = async (req, res) => {
     const { email, password } = req.body;
 
-    const user = users.find(u => u.email === email);
-    if (!user || user.password !== password) {
-        return res.status(401).json({ message: 'Invalid credentials.' });
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Please provide email and password.' });
     }
 
-    res.json({ message: 'Login successful!', user: { id: user.id, name: user.name, email: user.email } });
+    const sql = `SELECT * FROM users WHERE email = ?`;
+    db.get(sql, [email], async (err, user) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Internal server error.' });
+        }
+
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        // Compare password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        // Generate token
+        const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({
+            message: 'Login successful',
+            token,
+            user: { id: user.id, name: user.name, email: user.email }
+        });
+    });
 };
 
+// Middleware to protect routes
+exports.protect = (req, res, next) => {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+        return res.status(401).json({ message: 'Not authorized to access this route. No token provided.' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: 'Not authorized. Token invalid.' });
+    }
+};
+
+// Get current user (protected)
+exports.getMe = (req, res) => {
+    const sql = `SELECT id, name, email FROM users WHERE id = ?`;
+    db.get(sql, [req.user.id], (err, user) => {
+        if (err || !user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ user });
+    });
+};
