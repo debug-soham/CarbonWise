@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "install": "npm rebuild sqlite3 --build-from-source"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,6 @@
     "sqlite3": "^6.0.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "20.x"
   }
 }
