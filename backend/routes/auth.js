@@ -10,5 +10,6 @@ router.post('/login', authController.login);
 
 // Get current user route (protected)
 router.get('/me', authController.protect, authController.getMe);
+router.put('/me', authController.protect, authController.updateMe);
 
 module.exports = router;

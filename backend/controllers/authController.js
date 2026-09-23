@@ -100,11 +100,29 @@ exports.protect = (req, res, next) => {
 
 // Get current user (protected)
 exports.getMe = (req, res) => {
-    const sql = `SELECT id, name, email FROM users WHERE id = ?`;
+    const sql = `SELECT id, name, email, monthly_limit FROM users WHERE id = ?`;
     db.get(sql, [req.user.id], (err, user) => {
         if (err || !user) {
             return res.status(404).json({ message: 'User not found' });
         }
         res.json({ user });
+    });
+};
+
+// Update current user settings
+exports.updateMe = (req, res) => {
+    const { monthly_limit } = req.body;
+    
+    if (monthly_limit === undefined) {
+        return res.status(400).json({ message: 'monthly_limit is required' });
+    }
+
+    const sql = `UPDATE users SET monthly_limit = ? WHERE id = ?`;
+    db.run(sql, [parseFloat(monthly_limit), req.user.id], function (err) {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ message: 'Failed to update settings' });
+        }
+        res.json({ message: 'Settings updated successfully', monthly_limit: parseFloat(monthly_limit) });
     });
 };

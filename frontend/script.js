@@ -1,3 +1,7 @@
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : 'https://carbonwise-backend.onrender.com'; // Replace with actual Render URL once deployed
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // Protect Dashboard route
@@ -20,8 +24,79 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const btnAddLog = document.getElementById('btn-add-log');
+        if (btnAddLog) {
+            btnAddLog.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const electricity = document.getElementById('energy-electricity').value;
+                const gas = document.getElementById('energy-gas').value;
+                const renewablesSelect = document.getElementById('energy-renewables');
+                const useRenewables = renewablesSelect ? renewablesSelect.value.toLowerCase() === 'yes' : false;
+                
+                try {
+                    const response = await fetch(API_BASE_URL + '/api/logs', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ category: 'energy', electricity, gas, useRenewables })
+                    });
+                    
+                    const data = await response.json();
+                    if (response.ok) {
+                        alert('Footprint calculated and logged successfully!');
+                        document.getElementById('energy-electricity').value = '';
+                        document.getElementById('energy-gas').value = '';
+                        fetchMetrics(token);
+                        const navLink = document.querySelector('.nav-link[data-target="tab-dashboard"]');
+                        if(navLink) navLink.click();
+                    } else {
+                        alert(data.message || 'Error adding log');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('An error occurred');
+                }
+            });
+        }
+
+        const btnSaveSettings = document.getElementById('btn-save-settings');
+        if (btnSaveSettings) {
+            btnSaveSettings.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const newLimit = document.getElementById('input-monthly-limit').value;
+                const token = localStorage.getItem('token');
+                try {
+                    const response = await fetch(API_BASE_URL + '/api/auth/me', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ monthly_limit: parseFloat(newLimit) })
+                    });
+                    if (response.ok) {
+                        alert('Settings saved!');
+                        fetchMetrics(token);
+                    } else {
+                        const data = await response.json();
+                        alert(data.message || 'Error saving settings');
+                    }
+                } catch(err) {
+                    console.error(err);
+                    alert('Error saving settings');
+                }
+            });
+        }
+
+
+        
+
+
+
         // Fetch user data
-        fetch('http://localhost:5000/api/auth/me', {
+        fetch(API_BASE_URL + '/api/auth/me', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -34,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (welcomeTitle) {
                     welcomeTitle.textContent = `welcome back, ${data.user.name.split(' ')[0]}!`;
                 }
+                fetchMetrics(token);
             } else {
                 // Invalid token
                 localStorage.removeItem('token');
@@ -58,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const response = await fetch('http://localhost:5000/api/auth/register', {
+                const response = await fetch(API_BASE_URL + '/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
@@ -95,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const response = await fetch('http://localhost:5000/api/auth/login', {
+                const response = await fetch(API_BASE_URL + '/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -144,3 +220,69 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+async function fetchMetrics(token) {
+    try {
+        const response = await fetch(API_BASE_URL + '/api/logs/metrics', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('val-total-footprint').textContent = data.total;
+            document.getElementById('val-transport').innerHTML = `${data.breakdown.transport.toFixed(2)} kgCO<sub>2</sub>e`;
+            document.getElementById('val-food').innerHTML = `${data.breakdown.food.toFixed(2)} kgCO<sub>2</sub>e`;
+            document.getElementById('val-shopping').innerHTML = `${data.breakdown.shopping.toFixed(2)} kgCO<sub>2</sub>e`;
+            document.getElementById('val-energy').innerHTML = `${data.breakdown.energy.toFixed(2)} kgCO<sub>2</sub>e`;
+            
+            // Calculate and display percentages
+            const totalKg = parseFloat(data.total);
+            const limitKg = parseFloat(data.monthly_limit || 400.0);
+            
+            // Update Dashboard Co2 Bar
+            const pct = Math.min(100, Math.max(0, (totalKg / limitKg) * 100)).toFixed(0);
+            const valDashCo2 = document.getElementById('val-dash-co2');
+            if(valDashCo2) valDashCo2.innerHTML = `${totalKg.toFixed(1)} <span>kg CO<sub>2</sub></span>`;
+            
+            const valDashCo2Pct = document.getElementById('val-dash-co2-pct');
+            if(valDashCo2Pct) valDashCo2Pct.textContent = `${pct}% of sustainable limit`;
+            
+            const valDashCo2Target = document.getElementById('val-dash-co2-target');
+            if(valDashCo2Target) valDashCo2Target.textContent = `target: ${limitKg.toFixed(0)} kgCO2`;
+            
+            const barDashCo2 = document.getElementById('bar-dash-co2');
+            if(barDashCo2) barDashCo2.style.width = `${pct}%`;
+            
+            // Update Dashboard Gha Bar (mock conversion: 1000 kg ~ 0.5 gha)
+            const totalGha = (totalKg / 2000.0).toFixed(1);
+            const limitGha = (limitKg / 2000.0).toFixed(1);
+            
+            const valDashGha = document.getElementById('val-dash-gha');
+            if(valDashGha) valDashGha.innerHTML = `${totalGha} <span>gha</span>`;
+            
+            const valDashGhaPct = document.getElementById('val-dash-gha-pct');
+            if(valDashGhaPct) valDashGhaPct.textContent = `${pct}% of sustainable limit`;
+            
+            const valDashGhaTarget = document.getElementById('val-dash-gha-target');
+            if(valDashGhaTarget) valDashGhaTarget.textContent = `target: ${limitGha} gha`;
+            
+            const barDashGha = document.getElementById('bar-dash-gha');
+            if(barDashGha) barDashGha.style.width = `${pct}%`;
+            
+            // Update Consumption Tab Target text
+            const valConsTarget = document.getElementById('val-cons-target');
+            if(valConsTarget) valConsTarget.innerHTML = `${limitKg.toFixed(0)}<span>kg</span>`;
+            
+            // Update Settings input field
+            const inputMonthlyLimit = document.getElementById('input-monthly-limit');
+            if(inputMonthlyLimit && inputMonthlyLimit.value === '400') {
+                inputMonthlyLimit.value = limitKg;
+            }
+        }
+    } catch (err) {
+        console.error('Error fetching metrics', err);
+    }
+}
+
+        

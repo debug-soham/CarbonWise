@@ -49,7 +49,7 @@
                             <div class="bar" style="height: 20%"></div>
                             <div class="bar" style="height: 50%"></div>
                         </div>
-                        <div class="card-value">2.20 kgCO<sub>2</sub>e</div>
+                        <div class="card-value" id="val-transport">2.20 kgCO<sub>2</sub>e</div>
                     </div>
                     <!-- Food -->
                     <div class="card card-grey" style="border-radius: 2px;">
@@ -62,7 +62,7 @@
                             <div class="bar" style="height: 20%"></div>
                             <div class="bar" style="height: 45%"></div>
                         </div>
-                        <div class="card-value">7.52 kgCO<sub>2</sub>e</div>
+                        <div class="card-value" id="val-food">7.52 kgCO<sub>2</sub>e</div>
                     </div>
                     <!-- Shopping -->
                     <div class="card card-grey" style="border-radius: 2px;">
@@ -75,7 +75,7 @@
                             <div class="bar" style="height: 20%"></div>
                             <div class="bar" style="height: 45%"></div>
                         </div>
-                        <div class="card-value">3.62 kgCO<sub>2</sub>e</div>
+                        <div class="card-value" id="val-shopping">3.62 kgCO<sub>2</sub>e</div>
                     </div>
                     <!-- Energy -->
                     <div class="card card-grey" style="border-radius: 2px;">
@@ -88,7 +88,7 @@
                             <div class="bar" style="height: 20%"></div>
                             <div class="bar" style="height: 45%"></div>
                         </div>
-                        <div class="card-value">8.21 kgCO<sub>2</sub>e</div>
+                        <div class="card-value" id="val-energy">8.21 kgCO<sub>2</sub>e</div>
                     </div>
                 </div>
 
@@ -149,26 +149,26 @@
                     <div class="stat-card">
                         <div class="stat-card-title">carbon consumption</div>
                         <div class="consumption-stat mt-4">
-                            <div class="large-value small-num">5.3 <span>gha</span></div>
+                            <div class="large-value small-num" id="val-dash-gha">0.0 <span>gha</span></div>
                             <div class="sub-stat" style="display:flex; justify-content:space-between;">
-                                <span>52% of sustainable limit</span>
-                                <span>target: 4.0 gha</span>
+                                <span id="val-dash-gha-pct">0% of sustainable limit</span>
+                                <span id="val-dash-gha-target">target: 0.0 gha</span>
                             </div>
                             <div class="progress-bar-container" style="height: 20px; border-radius: 0; background: #e8edea; margin-top: 16px;">
-                                <div class="progress-bar" style="width: 52%; border-radius: 0;"></div>
+                                <div class="progress-bar" id="bar-dash-gha" style="width: 0%; border-radius: 0;"></div>
                             </div>
                         </div>
 
                         <hr style="border:0; border-top: 1px solid var(--border-color); margin: 32px 0;">
 
                         <div class="consumption-stat">
-                            <div class="large-value small-num">8.2 <span>metric tons CO<sub>2</sub></span></div>
+                            <div class="large-value small-num" id="val-dash-co2">0.0 <span>kg CO<sub>2</sub></span></div>
                             <div class="sub-stat" style="display:flex; justify-content:space-between;">
-                                <span>28% of sustainable limit</span>
-                                <span>target: 6.0 mtCO2</span>
+                                <span id="val-dash-co2-pct">0% of sustainable limit</span>
+                                <span id="val-dash-co2-target">target: 0 kgCO2</span>
                             </div>
                             <div class="progress-bar-container" style="height: 20px; border-radius: 0; background: #e8edea; margin-top: 16px;">
-                                <div class="progress-bar" style="width: 28%; background: var(--accent-green); border-radius: 0;"></div>
+                                <div class="progress-bar" id="bar-dash-co2" style="width: 0%; background: var(--accent-green); border-radius: 0;"></div>
                             </div>
                         </div>
                     </div>
@@ -195,7 +195,7 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-title">monthly target</div>
-                        <div class="stat-card-value">4.0<span>gha</span></div>
+                        <div class="stat-card-value" id="val-cons-target">0<span>kg</span></div>
                     </div>
                 </div>
 
@@ -209,21 +209,21 @@
 
                     <div class="form-row">
                         <label>Electricity usage</label>
-                        <input type="text" value="36">
+                        <input type="number" id="energy-electricity" value="">
                     </div>
                     <div class="form-row">
                         <label>Natural gas</label>
-                        <input type="text" value="1.5">
+                        <input type="number" id="energy-gas" value="">
                     </div>
                     <div class="form-row">
                         <label>Use renewables?</label>
-                        <select>
+                        <select id="energy-renewables">
                             <option>Yes</option>
                             <option>No</option>
                         </select>
                     </div>
 
-                    <button class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem; margin-top: 16px;">Calculate & Add Footprint</button>
+                    <button id="btn-add-log" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem; margin-top: 16px;">Calculate & Add Footprint</button>
                 </div>
             </div>
 
@@ -244,7 +244,9 @@
                     <div class="settings-card">
                         <h3>Impact goals</h3>
                         <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px;">Monthly sustainable limit</p>
-                        <input type="text" value="4.0 gha per month">
+                        <input type="number" id="input-monthly-limit" value="400" style="width:100%; margin-bottom:8px;">
+                        <p style="color: var(--text-muted); font-size: 0.8rem;">kg CO<sub>2</sub>e per month</p>
+                        <button id="btn-save-settings" class="btn btn-primary" style="padding: 6px 16px; margin-top: 12px; font-size: 0.9rem;">Save</button>
                     </div>
                 </div>
 

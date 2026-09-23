@@ -16,7 +16,22 @@ const db = new sqlite3.Database(dbPath, (err) => {
             password TEXT NOT NULL
         )`, (err) => {
             if (err) {
-                console.error('Error creating table', err.message);
+                console.error('Error creating users table', err.message);
+            }
+        });
+
+        // Create logs table if it doesn't exist
+        db.run(`CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            value REAL NOT NULL,
+            co2_impact REAL NOT NULL,
+            date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )`, (err) => {
+            if (err) {
+                console.error('Error creating logs table', err.message);
             }
         });
     }
