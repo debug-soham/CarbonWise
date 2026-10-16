@@ -65,8 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnSaveSettings) {
             btnSaveSettings.addEventListener('click', async (e) => {
                 e.preventDefault();
-                const newLimit = document.getElementById('input-monthly-limit').value;
-                const token = localStorage.getItem('token');
+                const newLimit = parseFloat(document.getElementById('input-monthly-limit').value);
+                if (!Number.isFinite(newLimit) || newLimit <= 0) {
+                    alert('Monthly limit must be a positive number.');
+                    return;
+                }
                 try {
                     const response = await fetch(API_BASE_URL + '/api/auth/me', {
                         method: 'PUT',
@@ -74,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify({ monthly_limit: parseFloat(newLimit) })
+                        body: JSON.stringify({ monthly_limit: newLimit })
                     });
                     if (response.ok) {
                         alert('Settings saved!');
@@ -101,22 +104,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Authorization': `Bearer ${token}`
             }
         })
-        .then(res => res.json())
-        .then(data => {
+        .then(async res => ({ status: res.status, data: await res.json() }))
+        .then(({ status, data }) => {
             if (data.user) {
                 // Update username in the header
-                const welcomeTitle = document.querySelector('.header-text h2');
+                const welcomeTitle = document.getElementById('welcome-title');
                 if (welcomeTitle) {
                     welcomeTitle.textContent = `welcome back, ${data.user.name.split(' ')[0]}!`;
                 }
                 fetchMetrics(token);
-            } else {
-                // Invalid token
+            } else if (status === 401 || status === 404) {
+                // Invalid/expired token or deleted account
                 localStorage.removeItem('token');
+                localStorage.removeItem('user');
                 window.location.href = 'signin.html';
+            } else {
+                console.error('Failed to load user', data.message);
             }
         })
-        .catch(err => console.error(err));
+        .catch(err => console.error('Could not reach the server', err));
     }
 
     // Auth Forms
@@ -230,7 +236,7 @@ async function fetchMetrics(token) {
         const data = await response.json();
 
         if (response.ok) {
-            document.getElementById('val-total-footprint').textContent = data.total;
+            document.getElementById('val-total-footprint').innerHTML = `${parseFloat(data.total).toFixed(1)} <span>kg CO<sub>2</sub>e</span>`;
             document.getElementById('val-transport').innerHTML = `${data.breakdown.transport.toFixed(2)} kgCO<sub>2</sub>e`;
             document.getElementById('val-food').innerHTML = `${data.breakdown.food.toFixed(2)} kgCO<sub>2</sub>e`;
             document.getElementById('val-shopping').innerHTML = `${data.breakdown.shopping.toFixed(2)} kgCO<sub>2</sub>e`;

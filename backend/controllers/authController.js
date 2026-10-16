@@ -1,42 +1,57 @@
-const db = require('../db');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const User = require('../models/User');
 
-const JWT_SECRET = 'super-secret-jwt-key-carbonwise'; // In production, use environment variables
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('JWT_SECRET environment variable is required in production.');
+    }
+    console.warn('JWT_SECRET not set; using an insecure development secret.');
+    return 'dev-only-insecure-jwt-secret';
+})();
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const toPublicUser = (user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    monthly_limit: user.monthly_limit
+});
+
+const signToken = (user) => jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
 
 // Register a new user
 exports.register = async (req, res) => {
-    const { name, email, password } = req.body;
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please provide all required fields.' });
     }
+    if (!EMAIL_PATTERN.test(email)) {
+        return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+    if (password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+    }
 
     try {
-        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await User.create({ name, email, password: hashedPassword });
 
-        // Insert into database
-        const sql = `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
-        db.run(sql, [name, email, hashedPassword], function (err) {
-            if (err) {
-                if (err.message.includes('UNIQUE constraint failed')) {
-                    return res.status(400).json({ message: 'User with this email already exists.' });
-                }
-                console.error(err);
-                return res.status(500).json({ message: 'Internal server error.' });
-            }
-
-            // Generate token
-            const token = jwt.sign({ id: this.lastID, name }, JWT_SECRET, { expiresIn: '7d' });
-
-            res.status(201).json({
-                message: 'User registered successfully!',
-                token,
-                user: { id: this.lastID, name, email }
-            });
+        res.status(201).json({
+            message: 'User registered successfully!',
+            token: signToken(user),
+            user: toPublicUser(user)
         });
     } catch (error) {
+        // 11000 = duplicate key on the unique email index
+        if (error.code === 11000) {
+            return res.status(400).json({ message: 'User with this email already exists.' });
+        }
         console.error(error);
         res.status(500).json({ message: 'Internal server error.' });
     }
@@ -44,38 +59,28 @@ exports.register = async (req, res) => {
 
 // Login existing user
 exports.login = async (req, res) => {
-    const { email, password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
 
     if (!email || !password) {
         return res.status(400).json({ message: 'Please provide email and password.' });
     }
 
-    const sql = `SELECT * FROM users WHERE email = ?`;
-    db.get(sql, [email], async (err, user) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ message: 'Internal server error.' });
-        }
-
-        if (!user) {
+    try {
+        const user = await User.findOne({ email }).select('+password');
+        if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
-
-        // Compare password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-
-        // Generate token
-        const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
 
         res.json({
             message: 'Login successful',
-            token,
-            user: { id: user.id, name: user.name, email: user.email }
+            token: signToken(user),
+            user: toPublicUser(user)
         });
-    });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 // Middleware to protect routes
@@ -91,6 +96,9 @@ exports.protect = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        if (!mongoose.isValidObjectId(decoded.id)) {
+            return res.status(401).json({ message: 'Not authorized. Token invalid.' });
+        }
         req.user = decoded;
         next();
     } catch (err) {
@@ -99,30 +107,35 @@ exports.protect = (req, res, next) => {
 };
 
 // Get current user (protected)
-exports.getMe = (req, res) => {
-    const sql = `SELECT id, name, email, monthly_limit FROM users WHERE id = ?`;
-    db.get(sql, [req.user.id], (err, user) => {
-        if (err || !user) {
+exports.getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.json({ user });
-    });
+        res.json({ user: toPublicUser(user) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error.' });
+    }
 };
 
 // Update current user settings
-exports.updateMe = (req, res) => {
-    const { monthly_limit } = req.body;
-    
-    if (monthly_limit === undefined) {
-        return res.status(400).json({ message: 'monthly_limit is required' });
+exports.updateMe = async (req, res) => {
+    const monthlyLimit = parseFloat(req.body.monthly_limit);
+
+    if (!Number.isFinite(monthlyLimit) || monthlyLimit <= 0) {
+        return res.status(400).json({ message: 'Monthly limit must be a positive number.' });
     }
 
-    const sql = `UPDATE users SET monthly_limit = ? WHERE id = ?`;
-    db.run(sql, [parseFloat(monthly_limit), req.user.id], function (err) {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ message: 'Failed to update settings' });
+    try {
+        const user = await User.findByIdAndUpdate(req.user.id, { monthly_limit: monthlyLimit }, { returnDocument: 'after', runValidators: true });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
-        res.json({ message: 'Settings updated successfully', monthly_limit: parseFloat(monthly_limit) });
-    });
+        res.json({ message: 'Settings updated successfully', monthly_limit: user.monthly_limit });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to update settings' });
+    }
 };
