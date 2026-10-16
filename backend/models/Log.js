@@ -1,13 +1,15 @@
 const mongoose = require('mongoose');
-
-const CATEGORIES = ['energy', 'transport', 'food', 'shopping', 'materials', 'packaging'];
+const { CATEGORIES } = require('../emissions');
 
 const logSchema = new mongoose.Schema({
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     category: { type: String, required: true, enum: CATEGORIES },
-    // Raw inputs the footprint was calculated from (e.g. { electricity: 120, gas: 3 })
+    // Raw inputs the footprint was calculated from (e.g. { mode: 'bus', distance: 12 })
     details: { type: mongoose.Schema.Types.Mixed, default: {} },
+    // Human-readable summary shown in the activity history
+    description: { type: String, default: '' },
     co2_impact: { type: Number, required: true, min: 0 },
+    // When the activity happened (can be backdated), not when it was logged
     date: { type: Date, default: Date.now }
 }, { timestamps: true });
 

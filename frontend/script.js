@@ -2,127 +2,74 @@ const API_BASE_URL = window.location.hostname === 'localhost' || window.location
     ? 'http://localhost:5000'
     : 'https://carbonwise-c4di.onrender.com';
 
+const CATEGORY_LABELS = {
+    energy: 'Home energy',
+    transport: 'Transportation',
+    food: 'Food',
+    shopping: 'Shopping'
+};
+
+// Emission factor catalogue, loaded from the API
+let factors = null;
+
+function logout(redirectTo = 'signin.html') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = redirectTo;
+}
+
+// Authenticated JSON request. Sends the user to sign-in if the token is rejected.
+async function apiFetch(path, { method = 'GET', body } = {}) {
+    const response = await fetch(API_BASE_URL + path, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+        logout();
+    }
+    return { ok: response.ok, status: response.status, data };
+}
+
+// ---------- Date helpers (all in the user's local time) ----------
+
+function toDateInputValue(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function rangeQuery(from, to) {
+    return `from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
+}
+
+function monthRange(date = new Date()) {
+    return rangeQuery(new Date(date.getFullYear(), date.getMonth(), 1), new Date(date.getFullYear(), date.getMonth() + 1, 1));
+}
+
+function dayRange(date = new Date()) {
+    return rangeQuery(new Date(date.getFullYear(), date.getMonth(), date.getDate()), new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
+}
+
+function formatShortDate(iso) {
+    return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // Protect Dashboard route
-    const currentPath = window.location.pathname;
-    if (currentPath.includes('dashboard.html')) {
-        const token = localStorage.getItem('token');
-        if (!token) {
+    if (document.getElementById('tab-dashboard')) {
+        if (!localStorage.getItem('token')) {
             window.location.href = 'signin.html';
             return;
         }
-
-        // Setup logout button
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'index.html';
-            });
-        }
-
-        const btnAddLog = document.getElementById('btn-add-log');
-        if (btnAddLog) {
-            btnAddLog.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const electricity = document.getElementById('energy-electricity').value;
-                const gas = document.getElementById('energy-gas').value;
-                const renewablesSelect = document.getElementById('energy-renewables');
-                const useRenewables = renewablesSelect ? renewablesSelect.value.toLowerCase() === 'yes' : false;
-
-                try {
-                    const response = await fetch(API_BASE_URL + '/api/logs', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ category: 'energy', electricity, gas, useRenewables })
-                    });
-
-                    const data = await response.json();
-                    if (response.ok) {
-                        alert('Footprint calculated and logged successfully!');
-                        document.getElementById('energy-electricity').value = '';
-                        document.getElementById('energy-gas').value = '';
-                        fetchMetrics(token);
-                        const navLink = document.querySelector('.nav-link[data-target="tab-dashboard"]');
-                        if(navLink) navLink.click();
-                    } else {
-                        alert(data.message || 'Error adding log');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert('An error occurred');
-                }
-            });
-        }
-
-        const btnSaveSettings = document.getElementById('btn-save-settings');
-        if (btnSaveSettings) {
-            btnSaveSettings.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const newLimit = parseFloat(document.getElementById('input-monthly-limit').value);
-                if (!Number.isFinite(newLimit) || newLimit <= 0) {
-                    alert('Monthly limit must be a positive number.');
-                    return;
-                }
-                try {
-                    const response = await fetch(API_BASE_URL + '/api/auth/me', {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ monthly_limit: newLimit })
-                    });
-                    if (response.ok) {
-                        alert('Settings saved!');
-                        fetchMetrics(token);
-                    } else {
-                        const data = await response.json();
-                        alert(data.message || 'Error saving settings');
-                    }
-                } catch(err) {
-                    console.error(err);
-                    alert('Error saving settings');
-                }
-            });
-        }
-
-
-
-
-
-
-        // Fetch user data
-        fetch(API_BASE_URL + '/api/auth/me', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(async res => ({ status: res.status, data: await res.json() }))
-        .then(({ status, data }) => {
-            if (data.user) {
-                // Update username in the header
-                const welcomeTitle = document.getElementById('welcome-title');
-                if (welcomeTitle) {
-                    welcomeTitle.textContent = `welcome back, ${data.user.name.split(' ')[0]}!`;
-                }
-                fetchMetrics(token);
-            } else if (status === 401 || status === 404) {
-                // Invalid/expired token or deleted account
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'signin.html';
-            } else {
-                console.error('Failed to load user', data.message);
-            }
-        })
-        .catch(err => console.error('Could not reach the server', err));
+        initDashboard();
     }
 
     // Auth Forms
@@ -207,9 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (navLinks.length > 0 && tabContents.length > 0) {
         navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                // Note: we let href navigate if it's the logout button, but it's handled above
-                // Ensure we don't mess up non-tab links
+            link.addEventListener('click', () => {
                 const targetId = link.getAttribute('data-target');
                 if (!targetId) return;
 
@@ -227,15 +172,282 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
-async function fetchMetrics(token) {
-    try {
-        const response = await fetch(API_BASE_URL + '/api/logs/metrics', {
-            headers: { 'Authorization': `Bearer ${token}` }
+function initDashboard() {
+    // Setup logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout('index.html');
         });
-        const data = await response.json();
+    }
 
-        if (response.ok) {
+    setupLogForms();
+    setupHistory();
+    setupSettings();
+
+    // Fetch user data
+    apiFetch('/api/auth/me')
+        .then(({ ok, status, data }) => {
+            if (ok && data.user) {
+                // Update username in the header
+                const welcomeTitle = document.getElementById('welcome-title');
+                if (welcomeTitle) {
+                    welcomeTitle.textContent = `welcome back, ${data.user.name.split(' ')[0]}!`;
+                }
+                refreshDashboard();
+            } else if (status === 404) {
+                // Account no longer exists
+                logout();
+            } else if (status !== 401) {
+                console.error('Failed to load user', data.message);
+            }
+        })
+        .catch(err => console.error('Could not reach the server', err));
+}
+
+function refreshDashboard() {
+    fetchMetrics();
+    loadHistory();
+    loadTodayCount();
+}
+
+// ---------- Logging forms ----------
+
+function setupLogForms() {
+    // Sub-tabs: Home energy / Transportation / Food / Shopping
+    const formTabs = document.querySelectorAll('.activity-tabs span[data-form]');
+    formTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            formTabs.forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.log-form').forEach(f => f.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.form).classList.add('active');
+        });
+    });
+
+    // Dates default to today and can't be in the future
+    const today = toDateInputValue(new Date());
+    document.querySelectorAll('.log-date').forEach(input => {
+        input.value = today;
+        input.max = today;
+    });
+
+    loadFactors();
+
+    document.querySelectorAll('.log-form').forEach(form => {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            submitLog(form);
+        });
+    });
+}
+
+async function loadFactors() {
+    try {
+        const { ok, data } = await apiFetch('/api/logs/factors');
+        if (!ok) return;
+        factors = data.factors;
+
+        // Build the option lists for transport modes, meals and shopping items
+        document.querySelectorAll('select[data-factors]').forEach(select => {
+            const table = factors[select.dataset.factors];
+            select.innerHTML = '';
+            Object.entries(table).forEach(([key, entry]) => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = entry.label;
+                select.appendChild(option);
+            });
+        });
+
+        // "People in the car" only applies to car modes
+        const modeSelect = document.getElementById('transport-mode');
+        const passengersRow = document.getElementById('row-passengers');
+        const togglePassengers = () => {
+            passengersRow.style.display = factors.transport[modeSelect.value]?.perVehicle ? '' : 'none';
+        };
+        modeSelect.addEventListener('change', togglePassengers);
+        togglePassengers();
+    } catch (err) {
+        console.error('Failed to load emission factors', err);
+    }
+}
+
+async function submitLog(form) {
+    const body = { category: form.dataset.category };
+    new FormData(form).forEach((value, key) => {
+        if (key !== 'date' && value !== '') body[key] = value;
+    });
+    if (body.renewable !== undefined) body.renewable = body.renewable === 'true';
+
+    // Today's entries use the current time; backdated ones use local midday
+    const dateValue = form.querySelector('.log-date').value;
+    if (dateValue && dateValue !== toDateInputValue(new Date())) {
+        const [y, m, d] = dateValue.split('-').map(Number);
+        body.date = new Date(y, m - 1, d, 12).toISOString();
+    }
+
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+        const { ok, data } = await apiFetch('/api/logs', { method: 'POST', body });
+        if (ok) {
+            alert(`Logged ${data.log.co2_impact.toFixed(2)} kg CO2e: ${data.log.description}`);
+            // Clear the amounts but keep the selections and date
+            form.querySelectorAll('input[type="number"]').forEach(input => {
+                input.value = input.defaultValue;
+            });
+            refreshDashboard();
+        } else {
+            alert(data.message || 'Error adding log');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Could not reach the server. Please try again.');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+// ---------- Activity history ----------
+
+function setupHistory() {
+    const filter = document.getElementById('history-filter');
+    if (filter) filter.addEventListener('change', loadHistory);
+
+    const list = document.getElementById('history-list');
+    if (!list) return;
+
+    // Two-step delete: first click asks for confirmation, second click deletes
+    list.addEventListener('click', async (e) => {
+        const button = e.target.closest('.history-delete');
+        if (!button) return;
+
+        if (!button.classList.contains('confirming')) {
+            button.classList.add('confirming');
+            button.textContent = 'Confirm';
+            setTimeout(() => {
+                button.classList.remove('confirming');
+                button.textContent = 'Delete';
+            }, 3000);
+            return;
+        }
+
+        button.disabled = true;
+        try {
+            const { ok, data } = await apiFetch(`/api/logs/${button.dataset.id}`, { method: 'DELETE' });
+            if (ok) {
+                refreshDashboard();
+            } else {
+                alert(data.message || 'Could not delete this entry');
+                button.disabled = false;
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Could not reach the server. Please try again.');
+            button.disabled = false;
+        }
+    });
+}
+
+async function loadHistory() {
+    const list = document.getElementById('history-list');
+    if (!list) return;
+
+    const category = document.getElementById('history-filter')?.value;
+    const query = category ? `?category=${category}` : '';
+
+    try {
+        const { ok, data } = await apiFetch(`/api/logs${query}`);
+        if (!ok) return;
+
+        list.innerHTML = '';
+        if (data.logs.length === 0) {
+            const empty = document.createElement('li');
+            empty.className = 'history-empty';
+            empty.textContent = category ? 'No entries in this category yet.' : 'No activity logged yet. Add your first entry above.';
+            list.appendChild(empty);
+            return;
+        }
+
+        data.logs.forEach(log => {
+            const row = document.createElement('li');
+            row.className = 'history-row';
+
+            const cells = [
+                ['history-date', formatShortDate(log.date)],
+                ['history-tag', CATEGORY_LABELS[log.category] || log.category],
+                ['history-desc', log.description],
+                ['history-co2', `${log.co2_impact.toFixed(2)} kg`]
+            ];
+            cells.forEach(([className, text]) => {
+                const cell = document.createElement('span');
+                cell.className = className;
+                cell.textContent = text;
+                row.appendChild(cell);
+            });
+
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'history-delete';
+            del.dataset.id = log.id;
+            del.textContent = 'Delete';
+            del.setAttribute('aria-label', `Delete ${log.description}`);
+            row.appendChild(del);
+
+            list.appendChild(row);
+        });
+    } catch (err) {
+        console.error('Error loading history', err);
+    }
+}
+
+async function loadTodayCount() {
+    try {
+        const { ok, data } = await apiFetch(`/api/logs/metrics?${dayRange()}`);
+        const el = document.getElementById('val-cons-today');
+        if (ok && el) el.innerHTML = `${data.count}<span>${data.count === 1 ? 'entry' : 'entries'}</span>`;
+    } catch (err) {
+        console.error('Error loading today\'s entries', err);
+    }
+}
+
+// ---------- Settings ----------
+
+function setupSettings() {
+    const btnSaveSettings = document.getElementById('btn-save-settings');
+    if (!btnSaveSettings) return;
+
+    btnSaveSettings.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const newLimit = parseFloat(document.getElementById('input-monthly-limit').value);
+        if (!Number.isFinite(newLimit) || newLimit <= 0) {
+            alert('Monthly limit must be a positive number.');
+            return;
+        }
+        try {
+            const { ok, data } = await apiFetch('/api/auth/me', { method: 'PUT', body: { monthly_limit: newLimit } });
+            if (ok) {
+                alert('Settings saved!');
+                fetchMetrics();
+            } else {
+                alert(data.message || 'Error saving settings');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error saving settings');
+        }
+    });
+}
+
+// ---------- Metrics (current month) ----------
+
+async function fetchMetrics() {
+    try {
+        const { ok, data } = await apiFetch(`/api/logs/metrics?${monthRange()}`);
+
+        if (ok) {
             document.getElementById('val-total-footprint').innerHTML = `${parseFloat(data.total).toFixed(1)} <span>kg CO<sub>2</sub>e</span>`;
             document.getElementById('val-transport').innerHTML = `${data.breakdown.transport.toFixed(2)} kgCO<sub>2</sub>e`;
             document.getElementById('val-food').innerHTML = `${data.breakdown.food.toFixed(2)} kgCO<sub>2</sub>e`;
@@ -276,13 +488,16 @@ async function fetchMetrics(token) {
             const barDashGha = document.getElementById('bar-dash-gha');
             if(barDashGha) barDashGha.style.width = `${pct}%`;
 
-            // Update Consumption Tab Target text
+            // Update Consumption Tab stats
+            const valConsMonth = document.getElementById('val-cons-month');
+            if(valConsMonth) valConsMonth.innerHTML = `${totalKg.toFixed(1)}<span>kg CO<sub>2</sub>e</span>`;
+
             const valConsTarget = document.getElementById('val-cons-target');
             if(valConsTarget) valConsTarget.innerHTML = `${limitKg.toFixed(0)}<span>kg</span>`;
 
             // Update Settings input field
             const inputMonthlyLimit = document.getElementById('input-monthly-limit');
-            if(inputMonthlyLimit && inputMonthlyLimit.value === '400') {
+            if(inputMonthlyLimit && document.activeElement !== inputMonthlyLimit) {
                 inputMonthlyLimit.value = limitKg;
             }
         }
@@ -290,5 +505,3 @@ async function fetchMetrics(token) {
         console.error('Error fetching metrics', err);
     }
 }
-
-

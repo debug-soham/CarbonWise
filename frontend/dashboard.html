@@ -187,11 +187,11 @@
                 <div class="consumption-stats">
                     <div class="stat-card">
                         <div class="stat-card-title">this month</div>
-                        <div class="stat-card-value">2.1<span>mtCO2</span></div>
+                        <div class="stat-card-value" id="val-cons-month">0<span>kg CO<sub>2</sub>e</span></div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-title">logged today</div>
-                        <div class="stat-card-value">3<span>entries</span></div>
+                        <div class="stat-card-value" id="val-cons-today">0<span>entries</span></div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-card-title">monthly target</div>
@@ -200,30 +200,108 @@
                 </div>
 
                 <div class="recent-activity-card">
-                    <h3>Recent activity</h3>
-                    <div class="activity-tabs">
-                        <span class="active">Home energy</span>
-                        <span>Transportation</span>
-                        <span>Lifestyle</span>
+                    <h3>Log an activity</h3>
+                    <div class="activity-tabs" role="tablist">
+                        <span class="active" data-form="form-energy" role="tab">Home energy</span>
+                        <span data-form="form-transport" role="tab">Transportation</span>
+                        <span data-form="form-food" role="tab">Food</span>
+                        <span data-form="form-shopping" role="tab">Shopping</span>
                     </div>
 
-                    <div class="form-row">
-                        <label>Electricity usage</label>
-                        <input type="number" id="energy-electricity" value="">
-                    </div>
-                    <div class="form-row">
-                        <label>Natural gas</label>
-                        <input type="number" id="energy-gas" value="">
-                    </div>
-                    <div class="form-row">
-                        <label>Use renewables?</label>
-                        <select id="energy-renewables">
-                            <option>Yes</option>
-                            <option>No</option>
+                    <form id="form-energy" class="log-form active" data-category="energy" novalidate>
+                        <div class="form-row">
+                            <label for="energy-electricity">Electricity (kWh)</label>
+                            <input type="number" id="energy-electricity" name="electricity" min="0" step="any" placeholder="0">
+                        </div>
+                        <div class="form-row">
+                            <label for="energy-lpg">Cooking gas, LPG (kg)</label>
+                            <input type="number" id="energy-lpg" name="lpg" min="0" step="any" placeholder="0">
+                        </div>
+                        <div class="form-row">
+                            <label for="energy-png">Piped natural gas (m³)</label>
+                            <input type="number" id="energy-png" name="png" min="0" step="any" placeholder="0">
+                        </div>
+                        <div class="form-row">
+                            <label for="energy-renewable">Electricity from renewables?</label>
+                            <select id="energy-renewable" name="renewable">
+                                <option value="false">No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="energy-date">Date</label>
+                            <input type="date" id="energy-date" name="date" class="log-date">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-log">Calculate &amp; add footprint</button>
+                    </form>
+
+                    <form id="form-transport" class="log-form" data-category="transport" novalidate>
+                        <div class="form-row">
+                            <label for="transport-mode">Mode</label>
+                            <select id="transport-mode" name="mode" data-factors="transport"></select>
+                        </div>
+                        <div class="form-row">
+                            <label for="transport-distance">Distance (km)</label>
+                            <input type="number" id="transport-distance" name="distance" min="0" step="any" placeholder="0">
+                        </div>
+                        <div class="form-row" id="row-passengers">
+                            <label for="transport-passengers">People in the car</label>
+                            <input type="number" id="transport-passengers" name="passengers" min="1" max="10" step="1" value="1">
+                        </div>
+                        <div class="form-row">
+                            <label for="transport-date">Date</label>
+                            <input type="date" id="transport-date" name="date" class="log-date">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-log">Calculate &amp; add footprint</button>
+                    </form>
+
+                    <form id="form-food" class="log-form" data-category="food" novalidate>
+                        <div class="form-row">
+                            <label for="food-meal">Meal type</label>
+                            <select id="food-meal" name="meal" data-factors="food"></select>
+                        </div>
+                        <div class="form-row">
+                            <label for="food-count">Number of meals</label>
+                            <input type="number" id="food-count" name="count" min="1" step="1" value="1">
+                        </div>
+                        <div class="form-row">
+                            <label for="food-date">Date</label>
+                            <input type="date" id="food-date" name="date" class="log-date">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-log">Calculate &amp; add footprint</button>
+                    </form>
+
+                    <form id="form-shopping" class="log-form" data-category="shopping" novalidate>
+                        <div class="form-row">
+                            <label for="shopping-item">Item</label>
+                            <select id="shopping-item" name="item" data-factors="shopping"></select>
+                        </div>
+                        <div class="form-row">
+                            <label for="shopping-quantity">Quantity</label>
+                            <input type="number" id="shopping-quantity" name="quantity" min="1" step="1" value="1">
+                        </div>
+                        <div class="form-row">
+                            <label for="shopping-date">Date</label>
+                            <input type="date" id="shopping-date" name="date" class="log-date">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-log">Calculate &amp; add footprint</button>
+                    </form>
+                </div>
+
+                <div class="recent-activity-card history-card">
+                    <div class="history-header">
+                        <h3>Recent activity</h3>
+                        <select id="history-filter" aria-label="Filter by category">
+                            <option value="">All categories</option>
+                            <option value="energy">Home energy</option>
+                            <option value="transport">Transportation</option>
+                            <option value="food">Food</option>
+                            <option value="shopping">Shopping</option>
                         </select>
                     </div>
-
-                    <button id="btn-add-log" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.9rem; margin-top: 16px;">Calculate & Add Footprint</button>
+                    <ul id="history-list" class="history-list">
+                        <li class="history-empty">Loading…</li>
+                    </ul>
                 </div>
             </div>
 

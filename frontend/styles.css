@@ -881,3 +881,104 @@ a {
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 16px 16px 0 0;
 }
+
+/* Consumption logging forms */
+.log-form {
+    display: none;
+}
+.log-form.active {
+    display: block;
+}
+.btn-log {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
+.btn-log:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* Activity history */
+.history-card {
+    margin-top: 16px;
+}
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.history-header h3 {
+    margin-bottom: 0;
+}
+.history-header select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: var(--font-family);
+    background: #fcfcfc;
+}
+.history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.history-row {
+    display: grid;
+    grid-template-columns: 90px 110px 1fr auto auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 0;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+.history-date {
+    color: var(--text-muted);
+}
+.history-tag {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--bg-light);
+    color: var(--primary-green);
+    justify-self: start;
+}
+.history-co2 {
+    font-weight: 500;
+    white-space: nowrap;
+}
+.history-delete {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    font-family: var(--font-family);
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.history-delete:hover {
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+.history-delete.confirming {
+    border-color: #c0392b;
+    color: #c0392b;
+}
+.history-empty {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 14px 0;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 700px) {
+    .history-row {
+        grid-template-columns: 1fr auto;
+        gap: 4px 12px;
+    }
+    .history-desc {
+        grid-column: 1 / -1;
+    }
+}
