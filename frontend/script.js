@@ -49,10 +49,6 @@ function rangeQuery(from, to) {
     return `from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
 }
 
-function monthRange(date = new Date()) {
-    return rangeQuery(new Date(date.getFullYear(), date.getMonth(), 1), new Date(date.getFullYear(), date.getMonth() + 1, 1));
-}
-
 function dayRange(date = new Date()) {
     return rangeQuery(new Date(date.getFullYear(), date.getMonth(), date.getDate()), new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
 }
@@ -186,6 +182,8 @@ function initDashboard() {
     setupHistory();
     setupSettings();
 
+    setText('header-date', new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toUpperCase());
+
     // Fetch user data
     apiFetch('/api/auth/me')
         .then(({ ok, status, data }) => {
@@ -195,6 +193,8 @@ function initDashboard() {
                 if (welcomeTitle) {
                     welcomeTitle.textContent = `welcome back, ${data.user.name.split(' ')[0]}!`;
                 }
+                setText('profile-name', data.user.name);
+                setText('profile-email', data.user.email);
                 refreshDashboard();
             } else if (status === 404) {
                 // Account no longer exists
@@ -441,67 +441,186 @@ function setupSettings() {
     });
 }
 
-// ---------- Metrics (current month) ----------
+// ---------- Dashboard metrics and charts (current month, local time) ----------
+
+const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const KG = 'kgCO<sub>2</sub>e';
+
+function monthKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function setHTML(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+}
+
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
+// Fill a progress bar, turning it red when over 100%
+function setProgress(barId, pctTextId, pct, label) {
+    const bar = document.getElementById(barId);
+    if (bar) {
+        bar.style.width = `${Math.min(100, Math.max(0, pct)).toFixed(0)}%`;
+        bar.classList.toggle('over', pct > 100);
+    }
+    const text = document.getElementById(pctTextId);
+    if (text) {
+        text.textContent = `${pct.toFixed(0)}% of ${label}`;
+        text.classList.toggle('over', pct > 100);
+    }
+}
 
 async function fetchMetrics() {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const tz = `tz=${encodeURIComponent(TIME_ZONE)}`;
+
     try {
-        const { ok, data } = await apiFetch(`/api/logs/metrics?${monthRange()}`);
+        const [metrics, months, days] = await Promise.all([
+            apiFetch(`/api/logs/metrics?${rangeQuery(monthStart, monthEnd)}`),
+            apiFetch(`/api/logs/series?${rangeQuery(sixMonthsAgo, monthEnd)}&unit=month&${tz}`),
+            apiFetch(`/api/logs/series?${rangeQuery(monthStart, monthEnd)}&unit=day&${tz}`)
+        ]);
+        if (!metrics.ok) return;
 
-        if (ok) {
-            document.getElementById('val-total-footprint').innerHTML = `${parseFloat(data.total).toFixed(1)} <span>kg CO<sub>2</sub>e</span>`;
-            document.getElementById('val-transport').innerHTML = `${data.breakdown.transport.toFixed(2)} kgCO<sub>2</sub>e`;
-            document.getElementById('val-food').innerHTML = `${data.breakdown.food.toFixed(2)} kgCO<sub>2</sub>e`;
-            document.getElementById('val-shopping').innerHTML = `${data.breakdown.shopping.toFixed(2)} kgCO<sub>2</sub>e`;
-            document.getElementById('val-energy').innerHTML = `${data.breakdown.energy.toFixed(2)} kgCO<sub>2</sub>e`;
-
-            // Calculate and display percentages
-            const totalKg = parseFloat(data.total);
-            const limitKg = parseFloat(data.monthly_limit || 400.0);
-
-            // Update Dashboard Co2 Bar
-            const pct = Math.min(100, Math.max(0, (totalKg / limitKg) * 100)).toFixed(0);
-            const valDashCo2 = document.getElementById('val-dash-co2');
-            if(valDashCo2) valDashCo2.innerHTML = `${totalKg.toFixed(1)} <span>kg CO<sub>2</sub></span>`;
-
-            const valDashCo2Pct = document.getElementById('val-dash-co2-pct');
-            if(valDashCo2Pct) valDashCo2Pct.textContent = `${pct}% of sustainable limit`;
-
-            const valDashCo2Target = document.getElementById('val-dash-co2-target');
-            if(valDashCo2Target) valDashCo2Target.textContent = `target: ${limitKg.toFixed(0)} kgCO2`;
-
-            const barDashCo2 = document.getElementById('bar-dash-co2');
-            if(barDashCo2) barDashCo2.style.width = `${pct}%`;
-
-            // Update Dashboard Gha Bar (mock conversion: 1000 kg ~ 0.5 gha)
-            const totalGha = (totalKg / 2000.0).toFixed(1);
-            const limitGha = (limitKg / 2000.0).toFixed(1);
-
-            const valDashGha = document.getElementById('val-dash-gha');
-            if(valDashGha) valDashGha.innerHTML = `${totalGha} <span>gha</span>`;
-
-            const valDashGhaPct = document.getElementById('val-dash-gha-pct');
-            if(valDashGhaPct) valDashGhaPct.textContent = `${pct}% of sustainable limit`;
-
-            const valDashGhaTarget = document.getElementById('val-dash-gha-target');
-            if(valDashGhaTarget) valDashGhaTarget.textContent = `target: ${limitGha} gha`;
-
-            const barDashGha = document.getElementById('bar-dash-gha');
-            if(barDashGha) barDashGha.style.width = `${pct}%`;
-
-            // Update Consumption Tab stats
-            const valConsMonth = document.getElementById('val-cons-month');
-            if(valConsMonth) valConsMonth.innerHTML = `${totalKg.toFixed(1)}<span>kg CO<sub>2</sub>e</span>`;
-
-            const valConsTarget = document.getElementById('val-cons-target');
-            if(valConsTarget) valConsTarget.innerHTML = `${limitKg.toFixed(0)}<span>kg</span>`;
-
-            // Update Settings input field
-            const inputMonthlyLimit = document.getElementById('input-monthly-limit');
-            if(inputMonthlyLimit && document.activeElement !== inputMonthlyLimit) {
-                inputMonthlyLimit.value = limitKg;
-            }
-        }
+        const limitKg = parseFloat(metrics.data.monthly_limit || 400);
+        renderTotals(metrics.data, limitKg, now);
+        if (months.ok) renderTrends(months.data.series, now);
+        if (days.ok) renderCalendar(days.data.series, limitKg, now);
     } catch (err) {
         console.error('Error fetching metrics', err);
+    }
+}
+
+function renderTotals(data, limitKg, now) {
+    const totalKg = parseFloat(data.total);
+
+    setHTML('val-total-footprint', `${totalKg.toFixed(1)} <span>kg CO<sub>2</sub>e</span>`);
+    ['transport', 'food', 'shopping', 'energy'].forEach(category => {
+        setHTML(`val-${category}`, `${data.breakdown[category].toFixed(2)} ${KG}`);
+    });
+
+    // Month total against the monthly limit
+    setHTML('val-dash-co2', `${totalKg.toFixed(1)} <span>kg CO<sub>2</sub></span>`);
+    setText('val-dash-co2-target', `limit: ${limitKg.toFixed(0)} kg`);
+    setProgress('bar-dash-co2', 'val-dash-co2-pct', (totalKg / limitKg) * 100, 'monthly limit');
+
+    // Average per day so far against the limit spread evenly over the month
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const dailyBudget = limitKg / daysInMonth;
+    const dailyAverage = totalKg / now.getDate();
+    setHTML('val-dash-daily', `${dailyAverage.toFixed(1)} <span>kg / day</span>`);
+    setText('val-dash-daily-target', `budget: ${dailyBudget.toFixed(1)} kg / day`);
+    setProgress('bar-dash-daily', 'val-dash-daily-pct', (dailyAverage / dailyBudget) * 100, 'daily budget');
+
+    // Consumption tab stats
+    setHTML('val-cons-month', `${totalKg.toFixed(1)}<span>kg CO<sub>2</sub>e</span>`);
+    setHTML('val-cons-target', `${limitKg.toFixed(0)}<span>kg</span>`);
+
+    // Settings input (unless the user is editing it)
+    const inputMonthlyLimit = document.getElementById('input-monthly-limit');
+    if (inputMonthlyLimit && document.activeElement !== inputMonthlyLimit) {
+        inputMonthlyLimit.value = limitKg;
+    }
+}
+
+// Six-month bars on each category card, plus last/this/average comparison
+function renderTrends(series, now) {
+    const byMonth = Object.fromEntries(series.map(s => [s.period, s]));
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+        months.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
+    }
+
+    document.querySelectorAll('.card[data-category]').forEach(card => {
+        const category = card.dataset.category;
+        const values = months.map(m => byMonth[monthKey(m)]?.breakdown[category] || 0);
+        const max = Math.max(...values);
+        const container = card.querySelector('.chart-bars');
+        container.innerHTML = '';
+
+        values.forEach((value, i) => {
+            const bar = document.createElement('div');
+            bar.className = i === values.length - 1 ? 'bar current' : 'bar';
+            // Keep small non-zero months visible
+            const pct = max > 0 ? Math.max(value / max * 100, value > 0 ? 8 : 0) : 0;
+            bar.style.height = `${+pct.toFixed(1)}%`;
+            bar.title = `${months[i].toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}: ${value.toFixed(2)} kg`;
+            container.appendChild(bar);
+        });
+    });
+
+    const totals = months.map(m => byMonth[monthKey(m)]?.total || 0);
+    const thisMonth = totals[5];
+    const lastMonth = totals[4];
+    // Average of earlier months that have any entries
+    const earlier = totals.slice(0, 5).filter(v => v > 0);
+    const average = earlier.length ? earlier.reduce((a, b) => a + b, 0) / earlier.length : 0;
+
+    const maxBar = Math.max(thisMonth, lastMonth, average);
+    [['last', lastMonth], ['this', thisMonth], ['avg', average]].forEach(([key, value]) => {
+        const bar = document.getElementById(`fb-bar-${key}`);
+        if (bar) bar.style.height = `${maxBar > 0 ? Math.max(2, value / maxBar * 80) : 2}px`;
+        setHTML(`fb-val-${key}`, `${value.toFixed(2)} ${KG}`);
+    });
+
+    if (lastMonth > 0) {
+        const change = (thisMonth - lastMonth) / lastMonth * 100;
+        setText('val-total-change', `${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(0)}% vs last month so far`);
+    } else {
+        setText('val-total-change', 'no entries last month to compare');
+    }
+}
+
+// One dot per day: tree = under the daily budget, dark = over, grey = nothing logged
+function renderCalendar(series, limitKg, now) {
+    const grid = document.getElementById('calendar-grid');
+    if (!grid) return;
+
+    const byDay = Object.fromEntries(series.map(s => [s.period, s]));
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const dailyBudget = limitKg / daysInMonth;
+    const monthName = now.toLocaleDateString(undefined, { month: 'long' });
+
+    setText('cal-today', String(now.getDate()));
+    setText('cal-month', `${monthName}, ${year}`);
+
+    grid.innerHTML = '';
+    // Monday-first week: blanks before the 1st
+    const leading = (new Date(year, month, 1).getDay() + 6) % 7;
+    for (let i = 0; i < leading; i++) {
+        const blank = document.createElement('div');
+        blank.className = 'cal-dot blank';
+        grid.appendChild(blank);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dot = document.createElement('div');
+        const entry = byDay[`${monthKey(now)}-${String(day).padStart(2, '0')}`];
+        const classes = ['cal-dot'];
+        let label;
+
+        if (day > now.getDate()) {
+            classes.push('empty');
+            label = 'upcoming';
+        } else if (entry && entry.count > 0) {
+            classes.push(entry.total <= dailyBudget ? 'tree' : 'dark');
+            label = `${entry.total.toFixed(2)} kg (budget ${dailyBudget.toFixed(1)} kg)`;
+        } else {
+            label = 'nothing logged';
+        }
+        if (day === now.getDate()) classes.push('today');
+
+        dot.className = classes.join(' ');
+        dot.title = `${day} ${monthName}: ${label}`;
+        grid.appendChild(dot);
     }
 }

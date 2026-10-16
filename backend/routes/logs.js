@@ -9,6 +9,7 @@ router.use(authController.protect);
 router.get('/', logController.listLogs);
 router.post('/', logController.addLog);
 router.get('/metrics', logController.getMetrics);
+router.get('/series', logController.getSeries);
 router.get('/factors', logController.getFactors);
 router.delete('/:id', logController.deleteLog);
 

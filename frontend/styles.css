@@ -982,3 +982,141 @@ a {
         grid-column: 1 / -1;
     }
 }
+
+/* Dashboard charts (rendered from live data) */
+.chart-bars .bar {
+    opacity: 0.45;
+    min-height: 1px;
+}
+.chart-bars .bar.current {
+    opacity: 1;
+}
+.chart-caption {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: -4px 0 16px;
+}
+.dash-progress {
+    height: 20px;
+    border-radius: 0;
+    background: #e8edea;
+    margin-top: 16px;
+}
+.dash-progress .progress-bar {
+    border-radius: 0;
+}
+.progress-bar.progress-lime {
+    background: var(--accent-green);
+}
+.progress-bar.over {
+    background: #c0392b;
+}
+.sub-stat.over {
+    color: #c0392b;
+}
+.cal-dot.blank {
+    visibility: hidden;
+}
+.cal-dot.today {
+    outline: 2px solid var(--primary-green);
+    outline-offset: 2px;
+}
+.cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 20px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.cal-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.cal-legend .cal-dot {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+}
+.cal-legend .cal-dot.tree::after {
+    width: 8px;
+    height: 8px;
+}
+
+/* App pages: tablet and phone layout */
+@media (max-width: 900px) {
+    .app-layout {
+        flex-direction: column;
+    }
+    .app-sidebar {
+        width: auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 24px;
+        padding: 16px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .app-sidebar .sidebar-logo {
+        margin-bottom: 0;
+    }
+    .app-sidebar .sidebar-menu {
+        flex-direction: row;
+        gap: 20px;
+    }
+    .app-main {
+        padding: 24px 16px;
+    }
+    .page-header {
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    .page-header h2 {
+        font-size: 1.8rem;
+    }
+    .dash-grid-top {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dash-grid-bottom,
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    .recent-activity-card,
+    .settings-card,
+    .session-card {
+        padding: 20px;
+    }
+    .session-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .activity-tabs {
+        flex-wrap: wrap;
+        gap: 8px 16px;
+    }
+    .form-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .form-row input, .form-row select {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .consumption-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    #val-total-footprint {
+        font-size: 3rem !important;
+    }
+    .calendar-grid,
+    .calendar-days {
+        gap: 8px;
+    }
+}

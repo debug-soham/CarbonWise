@@ -34,114 +34,78 @@
                         <h2 id="welcome-title">welcome back!</h2>
                         <p>here's your environmental overview.</p>
                     </div>
-                    <div class="header-date">APRIL 2026</div>
+                    <div class="header-date" id="header-date"></div>
                 </div>
 
                 <div class="dash-grid-top">
-                    <!-- Transport -->
-                    <div class="card card-transport" style="border-radius: 2px;">
+                    <div class="card card-transport" data-category="transport" style="border-radius: 2px;">
                         <div class="card-title" style="color: var(--text-main);">transport</div>
-                        <div class="chart-bars">
-                            <div class="bar" style="height: 5%"></div>
-                            <div class="bar" style="height: 30%"></div>
-                            <div class="bar" style="height: 50%"></div>
-                            <div class="bar" style="height: 60%"></div>
-                            <div class="bar" style="height: 20%"></div>
-                            <div class="bar" style="height: 50%"></div>
-                        </div>
+                        <div class="chart-bars" aria-hidden="true"></div>
                         <div class="card-value" id="val-transport">0.00 kgCO<sub>2</sub>e</div>
                     </div>
-                    <!-- Food -->
-                    <div class="card card-grey" style="border-radius: 2px;">
+                    <div class="card card-grey" data-category="food" style="border-radius: 2px;">
                         <div class="card-title">food</div>
-                        <div class="chart-bars">
-                            <div class="bar" style="height: 5%"></div>
-                            <div class="bar" style="height: 30%"></div>
-                            <div class="bar" style="height: 50%"></div>
-                            <div class="bar" style="height: 60%"></div>
-                            <div class="bar" style="height: 20%"></div>
-                            <div class="bar" style="height: 45%"></div>
-                        </div>
+                        <div class="chart-bars" aria-hidden="true"></div>
                         <div class="card-value" id="val-food">0.00 kgCO<sub>2</sub>e</div>
                     </div>
-                    <!-- Shopping -->
-                    <div class="card card-grey" style="border-radius: 2px;">
+                    <div class="card card-grey" data-category="shopping" style="border-radius: 2px;">
                         <div class="card-title">shopping</div>
-                        <div class="chart-bars">
-                            <div class="bar" style="height: 5%"></div>
-                            <div class="bar" style="height: 25%"></div>
-                            <div class="bar" style="height: 40%"></div>
-                            <div class="bar" style="height: 55%"></div>
-                            <div class="bar" style="height: 20%"></div>
-                            <div class="bar" style="height: 45%"></div>
-                        </div>
+                        <div class="chart-bars" aria-hidden="true"></div>
                         <div class="card-value" id="val-shopping">0.00 kgCO<sub>2</sub>e</div>
                     </div>
-                    <!-- Energy -->
-                    <div class="card card-grey" style="border-radius: 2px;">
+                    <div class="card card-grey" data-category="energy" style="border-radius: 2px;">
                         <div class="card-title">energy</div>
-                        <div class="chart-bars">
-                            <div class="bar" style="height: 5%"></div>
-                            <div class="bar" style="height: 25%"></div>
-                            <div class="bar" style="height: 45%"></div>
-                            <div class="bar" style="height: 60%"></div>
-                            <div class="bar" style="height: 20%"></div>
-                            <div class="bar" style="height: 45%"></div>
-                        </div>
+                        <div class="chart-bars" aria-hidden="true"></div>
                         <div class="card-value" id="val-energy">0.00 kgCO<sub>2</sub>e</div>
                     </div>
                 </div>
+                <p class="chart-caption">Bars show the last 6 months; the darkest bar is this month.</p>
 
                 <div class="dash-grid-bottom">
                     <!-- Total Footprint -->
                     <div class="stat-card">
-                        <div class="stat-card-title">total carbon footprint</div>
+                        <div class="stat-card-title">total carbon footprint this month</div>
                         <div class="stat-card-value" id="val-total-footprint" style="font-size: 4rem;">0.0 <span>kg CO<sub>2</sub>e</span></div>
+                        <div class="sub-stat" id="val-total-change"></div>
 
                         <div class="footprint-bars-container">
                             <div class="footprint-bars">
-                                <div class="fb-bar" style="height: 40px;"></div>
-                                <div class="fb-bar" style="height: 70px;"></div>
-                                <div class="fb-bar active" style="height: 35px;"></div>
+                                <div class="fb-bar" id="fb-bar-last" style="height: 2px;"></div>
+                                <div class="fb-bar active" id="fb-bar-this" style="height: 2px;"></div>
+                                <div class="fb-bar" id="fb-bar-avg" style="height: 2px;"></div>
                             </div>
                             <div class="footprint-labels">
                                 <div class="fb-text">
-                                    <div class="fb-label">materials</div>
-                                    <div class="fb-value">2.20 kgCO<sub>2</sub>e</div>
+                                    <div class="fb-label">last month</div>
+                                    <div class="fb-value" id="fb-val-last">0.00 kgCO<sub>2</sub>e</div>
                                 </div>
                                 <div class="fb-text">
-                                    <div class="fb-label">transport</div>
-                                    <div class="fb-value">1.15 kgCO<sub>2</sub>e</div>
+                                    <div class="fb-label">this month</div>
+                                    <div class="fb-value" id="fb-val-this">0.00 kgCO<sub>2</sub>e</div>
                                 </div>
                                 <div class="fb-text">
-                                    <div class="fb-label">packaging</div>
-                                    <div class="fb-value">0.75 kgCO<sub>2</sub>e</div>
+                                    <div class="fb-label">monthly average</div>
+                                    <div class="fb-value" id="fb-val-avg">0.00 kgCO<sub>2</sub>e</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Plantander -->
+                    <!-- Plantander: one dot per day of the month -->
                     <div class="stat-card" style="padding-top: 32px;">
                         <div class="stat-card-title" style="font-weight: 300; font-size: 1.1rem; color: #666; margin-bottom: 24px;">plantander</div>
                         <div class="stat-card-value" style="display: flex; align-items: baseline; gap: 8px;">
-                            <span style="font-size: 4.5rem; font-weight: 500; color: #1a1a1a; line-height: 1;">19</span>
-                            <span style="font-size: 1.1rem; color: #888;">September, 2026</span>
+                            <span id="cal-today" style="font-size: 4.5rem; font-weight: 500; color: #1a1a1a; line-height: 1;"></span>
+                            <span id="cal-month" style="font-size: 1.1rem; color: #888;"></span>
                         </div>
                         <div class="calendar-days" style="margin-top:32px;">
                             <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
                         </div>
-                        <div class="calendar-grid">
-                            <!-- Row 1 -->
-                            <div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot tree"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div>
-                            <!-- Row 2 -->
-                            <div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot dark"></div><div class="cal-dot tree"></div><div class="cal-dot dark"></div>
-                            <!-- Row 3 -->
-                            <div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot empty"></div><div class="cal-dot"></div><div class="cal-dot tree"></div><div class="cal-dot dark"></div>
-                            <!-- Row 4 -->
-                            <div class="cal-dot dark"></div><div class="cal-dot dark"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot tree"></div><div class="cal-dot"></div>
-                            <!-- Row 5 -->
-                            <div class="cal-dot"></div><div class="cal-dot"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div><div class="cal-dot empty"></div>
+                        <div class="calendar-grid" id="calendar-grid"></div>
+                        <div class="cal-legend">
+                            <span><i class="cal-dot tree"></i>under daily budget</span>
+                            <span><i class="cal-dot dark"></i>over</span>
+                            <span><i class="cal-dot"></i>nothing logged</span>
                         </div>
                     </div>
 
@@ -149,26 +113,26 @@
                     <div class="stat-card">
                         <div class="stat-card-title">carbon consumption</div>
                         <div class="consumption-stat mt-4">
-                            <div class="large-value small-num" id="val-dash-gha">0.0 <span>gha</span></div>
+                            <div class="large-value small-num" id="val-dash-co2">0.0 <span>kg CO<sub>2</sub></span></div>
                             <div class="sub-stat" style="display:flex; justify-content:space-between;">
-                                <span id="val-dash-gha-pct">0% of sustainable limit</span>
-                                <span id="val-dash-gha-target">target: 0.0 gha</span>
+                                <span id="val-dash-co2-pct">0% of monthly limit</span>
+                                <span id="val-dash-co2-target">limit: 0 kg</span>
                             </div>
-                            <div class="progress-bar-container" style="height: 20px; border-radius: 0; background: #e8edea; margin-top: 16px;">
-                                <div class="progress-bar" id="bar-dash-gha" style="width: 0%; border-radius: 0;"></div>
+                            <div class="progress-bar-container dash-progress">
+                                <div class="progress-bar progress-lime" id="bar-dash-co2" style="width: 0%;"></div>
                             </div>
                         </div>
 
                         <hr style="border:0; border-top: 1px solid var(--border-color); margin: 32px 0;">
 
                         <div class="consumption-stat">
-                            <div class="large-value small-num" id="val-dash-co2">0.0 <span>kg CO<sub>2</sub></span></div>
+                            <div class="large-value small-num" id="val-dash-daily">0.0 <span>kg / day</span></div>
                             <div class="sub-stat" style="display:flex; justify-content:space-between;">
-                                <span id="val-dash-co2-pct">0% of sustainable limit</span>
-                                <span id="val-dash-co2-target">target: 0 kgCO2</span>
+                                <span id="val-dash-daily-pct">0% of daily budget</span>
+                                <span id="val-dash-daily-target">budget: 0 kg / day</span>
                             </div>
-                            <div class="progress-bar-container" style="height: 20px; border-radius: 0; background: #e8edea; margin-top: 16px;">
-                                <div class="progress-bar" id="bar-dash-co2" style="width: 0%; background: var(--accent-green); border-radius: 0;"></div>
+                            <div class="progress-bar-container dash-progress">
+                                <div class="progress-bar" id="bar-dash-daily" style="width: 0%;"></div>
                             </div>
                         </div>
                     </div>
@@ -317,7 +281,8 @@
                 <div class="settings-grid">
                     <div class="settings-card">
                         <h3>Profile</h3>
-                        <p style="color: var(--text-muted);">Soham Gore • Mumbai, India</p>
+                        <p style="color: var(--text-muted);" id="profile-name"></p>
+                        <p style="color: var(--text-muted);" id="profile-email"></p>
                     </div>
                     <div class="settings-card">
                         <h3>Impact goals</h3>

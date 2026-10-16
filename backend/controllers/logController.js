@@ -125,6 +125,75 @@ exports.deleteLog = async (req, res) => {
     }
 };
 
+const MAX_SERIES_DAYS = 400;
+const PERIOD_FORMATS = { day: '%Y-%m-%d', month: '%Y-%m' };
+
+function parseTimeZone(tz) {
+    if (!tz) return 'UTC';
+    try {
+        // Throws RangeError for unknown IANA zones
+        new Intl.DateTimeFormat('en-US', { timeZone: tz });
+        return tz;
+    } catch (err) {
+        throw new ValidationError('Unknown time zone.');
+    }
+}
+
+// Totals per day or month for charts: ?from=&to=&unit=day|month&tz=Asia/Kolkata
+// Periods are computed in the given time zone so late-evening logs land on the right day.
+exports.getSeries = async (req, res) => {
+    try {
+        const { from, to } = parseRange(req.query);
+        const unit = req.query.unit || 'day';
+        if (!PERIOD_FORMATS[unit]) {
+            throw new ValidationError('unit must be "day" or "month".');
+        }
+        if (to - from > MAX_SERIES_DAYS * DAY_MS) {
+            throw new ValidationError(`Range cannot exceed ${MAX_SERIES_DAYS} days.`);
+        }
+        const timezone = parseTimeZone(req.query.tz);
+
+        const rows = await Log.aggregate([
+            { $match: { user: new mongoose.Types.ObjectId(req.user.id), date: { $gte: from, $lt: to } } },
+            {
+                $group: {
+                    _id: {
+                        period: { $dateToString: { format: PERIOD_FORMATS[unit], date: '$date', timezone } },
+                        category: '$category'
+                    },
+                    total: { $sum: '$co2_impact' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const byPeriod = new Map();
+        rows.forEach(({ _id, total, count }) => {
+            if (!byPeriod.has(_id.period)) {
+                byPeriod.set(_id.period, {
+                    period: _id.period,
+                    total: 0,
+                    count: 0,
+                    breakdown: Object.fromEntries(CATEGORIES.map(c => [c, 0]))
+                });
+            }
+            const entry = byPeriod.get(_id.period);
+            entry.total += total;
+            entry.count += count;
+            entry.breakdown[_id.category] = total;
+        });
+
+        const series = [...byPeriod.values()].sort((a, b) => a.period.localeCompare(b.period));
+        res.json({ unit, timezone, series });
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            return res.status(400).json({ message: error.message });
+        }
+        console.error(error);
+        res.status(500).json({ message: 'Failed to fetch series' });
+    }
+};
+
 // Get aggregated metrics for the dashboard over a date range (?from=&to=)
 exports.getMetrics = async (req, res) => {
     try {

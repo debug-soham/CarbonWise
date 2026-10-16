@@ -206,6 +206,42 @@ test('metrics are scoped to the requested range', async () => {
     assert.equal((await api('GET', `/api/logs/metrics?from=${to}&to=${from}`, { token })).status, 400);
 });
 
+test('series groups by day and month in the requested time zone', async () => {
+    const token = await registerUser('series@example.com');
+
+    // 20:00 UTC yesterday is already "today" in India (UTC+05:30)
+    const now = new Date();
+    const lateEvening = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 20));
+    const utcDay = lateEvening.toISOString().slice(0, 10);
+    const istDay = new Date(lateEvening.getTime() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    await log(token, { category: 'food', meal: 'vegan', count: 2, date: lateEvening.toISOString() });      // 1.0
+    await log(token, { category: 'transport', mode: 'bus', distance: 10, date: lateEvening.toISOString() }); // 1.02
+
+    const from = new Date(lateEvening.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    const to = new Date(lateEvening.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    const range = `from=${from}&to=${to}`;
+
+    let r = await api('GET', `/api/logs/series?${range}&unit=day`, { token });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.timezone, 'UTC');
+    assert.equal(r.data.series.length, 1);
+    assert.equal(r.data.series[0].period, utcDay);
+    assert.equal(r.data.series[0].count, 2);
+    assert.equal(Math.round(r.data.series[0].total * 100) / 100, 2.02);
+    assert.equal(r.data.series[0].breakdown.food, 1);
+
+    r = await api('GET', `/api/logs/series?${range}&unit=day&tz=Asia/Kolkata`, { token });
+    assert.equal(r.data.series[0].period, istDay);
+
+    r = await api('GET', `/api/logs/series?${range}&unit=month&tz=Asia/Kolkata`, { token });
+    assert.equal(r.data.series[0].period, istDay.slice(0, 7));
+
+    assert.equal((await api('GET', `/api/logs/series?${range}&unit=year`, { token })).status, 400);
+    assert.equal((await api('GET', `/api/logs/series?${range}&tz=Mars/Base`, { token })).status, 400);
+    assert.equal((await api('GET', `/api/logs/series?from=2025-01-01&to=2026-12-31`, { token })).status, 400);
+});
+
 test('history lists own logs newest first, filters, and deletes', async () => {
     const token = await registerUser('history@example.com');
     const other = await registerUser('other@example.com');
