@@ -18,6 +18,100 @@ function logout(redirectTo = 'signin.html') {
     window.location.href = redirectTo;
 }
 
+// ---------- In-page messages ----------
+
+// Small notification in the corner. type: success | error | info. duration 0 = stays until closed.
+function showToast(message, type = 'success', duration = 4000) {
+    let region = document.getElementById('toast-region');
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'toast-region';
+        region.className = 'toast-region';
+        region.setAttribute('aria-live', 'polite');
+        document.body.appendChild(region);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+    const text = document.createElement('span');
+    text.textContent = message;
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'toast-close';
+    close.setAttribute('aria-label', 'Dismiss');
+    close.textContent = '×';
+    toast.append(text, close);
+    region.appendChild(toast);
+
+    let timer;
+    const dismiss = () => {
+        clearTimeout(timer);
+        toast.classList.add('leaving');
+        setTimeout(() => toast.remove(), 200);
+    };
+    close.addEventListener('click', dismiss);
+    if (duration) timer = setTimeout(dismiss, duration);
+    return { dismiss };
+}
+
+// Show a message on the next page (e.g. after a redirect)
+function flash(message, type = 'success') {
+    try {
+        sessionStorage.setItem('flash', JSON.stringify({ message, type }));
+    } catch (_) { /* storage unavailable: skip the message */ }
+}
+
+function showFlash() {
+    try {
+        const raw = sessionStorage.getItem('flash');
+        if (!raw) return;
+        sessionStorage.removeItem('flash');
+        const { message, type } = JSON.parse(raw);
+        showToast(message, type);
+    } catch (_) { /* ignore */ }
+}
+
+// The free Render instance sleeps when idle, so the first request can be slow
+function withWakeUpNotice(promise, delay = 4000) {
+    let notice = null;
+    const timer = setTimeout(() => {
+        notice = showToast('Waking up the server... the first request can take up to a minute.', 'info', 0);
+    }, delay);
+    return promise.finally(() => {
+        clearTimeout(timer);
+        if (notice) notice.dismiss();
+    });
+}
+
+// Put a button into a loading state; returns a function that restores it
+function setBusy(button, label) {
+    const original = button.textContent;
+    button.disabled = true;
+    button.textContent = label;
+    return () => {
+        button.disabled = false;
+        button.textContent = original;
+    };
+}
+
+// Unauthenticated POST used by sign-in, register and the demo
+async function postJSON(path, body) {
+    const response = await fetch(API_BASE_URL + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    const data = await response.json().catch(() => ({}));
+    return { ok: response.ok, data };
+}
+
+function startSession(data) {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+}
+
 // Authenticated JSON request. Sends the user to sign-in if the token is rejected.
 async function apiFetch(path, { method = 'GET', body } = {}) {
     const response = await fetch(API_BASE_URL + path, {
@@ -68,81 +162,60 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard();
     }
 
+    showFlash();
+
     // Auth Forms
     const registerForm = document.getElementById('register-form');
     if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
+        registerForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('reg-name').value;
             const email = document.getElementById('reg-email').value;
             const password = document.getElementById('reg-password').value;
 
             if (password.length < 8) {
-                alert('Password must be at least 8 characters long.');
+                showToast('Password must be at least 8 characters long.', 'error');
                 return;
             }
-
-            try {
-                const response = await fetch(API_BASE_URL + '/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Save token
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    alert('Registration successful!');
-                    window.location.href = 'dashboard.html';
-                } else {
-                    alert(data.message || 'Registration failed.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            }
+            submitAuth(registerForm, '/api/auth/register', { name, email, password }, 'Creating account...',
+                (user) => `Welcome to CarbonWise, ${user.name.split(' ')[0]}! Log your first activity under Consumption.`);
         });
     }
 
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
+        loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
 
             if (password.length < 8) {
-                alert('Password must be at least 8 characters long.');
+                showToast('Password must be at least 8 characters long.', 'error');
                 return;
             }
-
-            try {
-                const response = await fetch(API_BASE_URL + '/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Save token
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    alert(`Welcome back, ${data.user.name}!`);
-                    window.location.href = 'dashboard.html';
-                } else {
-                    alert(data.message || 'Login failed.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            }
+            submitAuth(loginForm, '/api/auth/login', { email, password }, 'Signing in...',
+                (user) => `Welcome back, ${user.name.split(' ')[0]}!`);
         });
     }
+
+    // "Live demo": sign in to the shared read-only demo account
+    document.querySelectorAll('[data-demo]').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const restore = setBusy(button, 'Starting demo...');
+            try {
+                const { ok, data } = await withWakeUpNotice(postJSON('/api/auth/demo'));
+                if (!ok) throw new Error(data.message);
+                startSession(data);
+                flash('You\'re exploring a read-only demo with sample data.', 'info');
+                window.location.href = 'dashboard.html';
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Could not start the demo. Please try again.', 'error');
+                restore();
+            }
+        });
+    });
 
     // Dashboard Tab Switching
     const navLinks = document.querySelectorAll('.nav-link');
@@ -168,6 +241,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+async function submitAuth(form, path, body, busyLabel, welcomeMessage) {
+    const button = form.querySelector('button[type="submit"]');
+    const restore = setBusy(button, busyLabel);
+    try {
+        const { ok, data } = await withWakeUpNotice(postJSON(path, body));
+        if (ok) {
+            startSession(data);
+            flash(welcomeMessage(data.user));
+            window.location.href = 'dashboard.html';
+            return;
+        }
+        showToast(data.message || 'Something went wrong. Please try again.', 'error');
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Could not reach the server. Please try again.', 'error');
+    }
+    restore();
+}
+
 function initDashboard() {
     // Setup logout button
     const logoutBtn = document.getElementById('logout-btn');
@@ -185,25 +277,50 @@ function initDashboard() {
     setText('header-date', new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' }).toUpperCase());
 
     // Fetch user data
-    apiFetch('/api/auth/me')
+    withWakeUpNotice(apiFetch('/api/auth/me'))
         .then(({ ok, status, data }) => {
             if (ok && data.user) {
-                // Update username in the header
-                const welcomeTitle = document.getElementById('welcome-title');
-                if (welcomeTitle) {
-                    welcomeTitle.textContent = `welcome back, ${data.user.name.split(' ')[0]}!`;
-                }
-                setText('profile-name', data.user.name);
-                setText('profile-email', data.user.email);
+                showUser(data.user);
+                if (data.user.is_demo) enterDemoMode();
                 refreshDashboard();
             } else if (status === 404) {
                 // Account no longer exists
                 logout();
             } else if (status !== 401) {
-                console.error('Failed to load user', data.message);
+                showToast(data.message || 'Could not load your account.', 'error');
             }
         })
-        .catch(err => console.error('Could not reach the server', err));
+        .catch(err => {
+            console.error('Could not reach the server', err);
+            showToast('Could not reach the server. Check your connection and refresh.', 'error', 0);
+        });
+}
+
+function showUser(user) {
+    setText('welcome-title', `welcome back, ${user.name.split(' ')[0]}!`);
+    const nameInput = document.getElementById('input-profile-name');
+    if (nameInput && document.activeElement !== nameInput) nameInput.value = user.name;
+    setText('profile-email', user.email);
+}
+
+// The shared demo account is read-only: explain that and switch off editing
+function enterDemoMode() {
+    document.body.classList.add('demo-mode');
+
+    const banner = document.getElementById('demo-banner');
+    if (banner) banner.hidden = false;
+
+    const readOnly = 'Not available in the read-only demo';
+    document.querySelectorAll('.btn-log, #btn-save-settings, #btn-save-profile, #input-profile-name, #input-monthly-limit')
+        .forEach(el => {
+            el.disabled = true;
+            el.title = readOnly;
+        });
+
+    setText('welcome-title', 'welcome to the demo!');
+    setText('profile-email', 'Shared sample account');
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.textContent = 'Exit demo';
 }
 
 function refreshDashboard() {
@@ -293,18 +410,18 @@ async function submitLog(form) {
     try {
         const { ok, data } = await apiFetch('/api/logs', { method: 'POST', body });
         if (ok) {
-            alert(`Logged ${data.log.co2_impact.toFixed(2)} kg CO2e: ${data.log.description}`);
+            showToast(`Logged ${data.log.co2_impact.toFixed(2)} kg CO₂e · ${data.log.description}`);
             // Clear the amounts but keep the selections and date
             form.querySelectorAll('input[type="number"]').forEach(input => {
                 input.value = input.defaultValue;
             });
             refreshDashboard();
         } else {
-            alert(data.message || 'Error adding log');
+            showToast(data.message || 'Could not add this entry.', 'error');
         }
     } catch (err) {
         console.error(err);
-        alert('Could not reach the server. Please try again.');
+        showToast('Could not reach the server. Please try again.', 'error');
     } finally {
         button.disabled = false;
     }
@@ -338,14 +455,15 @@ function setupHistory() {
         try {
             const { ok, data } = await apiFetch(`/api/logs/${button.dataset.id}`, { method: 'DELETE' });
             if (ok) {
+                showToast('Entry deleted');
                 refreshDashboard();
             } else {
-                alert(data.message || 'Could not delete this entry');
+                showToast(data.message || 'Could not delete this entry.', 'error');
                 button.disabled = false;
             }
         } catch (err) {
             console.error(err);
-            alert('Could not reach the server. Please try again.');
+            showToast('Could not reach the server. Please try again.', 'error');
             button.disabled = false;
         }
     });
@@ -417,28 +535,57 @@ async function loadTodayCount() {
 
 function setupSettings() {
     const btnSaveSettings = document.getElementById('btn-save-settings');
-    if (!btnSaveSettings) return;
-
-    btnSaveSettings.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const newLimit = parseFloat(document.getElementById('input-monthly-limit').value);
-        if (!Number.isFinite(newLimit) || newLimit <= 0) {
-            alert('Monthly limit must be a positive number.');
-            return;
-        }
-        try {
-            const { ok, data } = await apiFetch('/api/auth/me', { method: 'PUT', body: { monthly_limit: newLimit } });
-            if (ok) {
-                alert('Settings saved!');
-                fetchMetrics();
-            } else {
-                alert(data.message || 'Error saving settings');
+    if (btnSaveSettings) {
+        btnSaveSettings.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const newLimit = parseFloat(document.getElementById('input-monthly-limit').value);
+            if (!Number.isFinite(newLimit) || newLimit <= 0) {
+                showToast('Monthly limit must be a positive number.', 'error');
+                return;
             }
-        } catch (err) {
-            console.error(err);
-            alert('Error saving settings');
-        }
-    });
+            const restore = setBusy(btnSaveSettings, 'Saving...');
+            try {
+                const { ok, data } = await apiFetch('/api/auth/me', { method: 'PUT', body: { monthly_limit: newLimit } });
+                if (ok) {
+                    showToast(`Monthly limit set to ${newLimit} kg CO₂e`);
+                    fetchMetrics();
+                } else {
+                    showToast(data.message || 'Could not save your limit.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Could not reach the server. Please try again.', 'error');
+            }
+            restore();
+        });
+    }
+
+    const btnSaveProfile = document.getElementById('btn-save-profile');
+    if (btnSaveProfile) {
+        btnSaveProfile.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('input-profile-name').value.trim();
+            if (!name) {
+                showToast('Name cannot be empty.', 'error');
+                return;
+            }
+            const restore = setBusy(btnSaveProfile, 'Saving...');
+            try {
+                const { ok, data } = await apiFetch('/api/auth/me', { method: 'PUT', body: { name } });
+                if (ok) {
+                    showUser(data.user);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    showToast('Profile updated');
+                } else {
+                    showToast(data.message || 'Could not update your profile.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Could not reach the server. Please try again.', 'error');
+            }
+            restore();
+        });
+    }
 }
 
 // ---------- Dashboard metrics and charts (current month, local time) ----------

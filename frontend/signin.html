@@ -28,12 +28,12 @@
 
             <form class="auth-form" id="login-form">
                 <div class="form-group">
-                    <label>Email address</label>
-                    <input type="email" id="login-email" placeholder="you@example.com" required>
+                    <label for="login-email">Email address</label>
+                    <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" required>
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" placeholder="Enter your password" required minlength="8">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password" required minlength="8">
                 </div>
                 <button type="submit" class="btn btn-primary btn-submit">Sign In</button>
             </form>
@@ -44,6 +44,9 @@
                 </div>
                 <div class="link-group">
                     New to CarbonWise? <a href="register.html">Create your account</a>
+                </div>
+                <div class="link-group">
+                    Just looking? <a href="dashboard.html" data-demo>Try the live demo</a>
                 </div>
             </div>
 

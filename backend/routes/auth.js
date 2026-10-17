@@ -8,8 +8,11 @@ router.post('/register', authController.register);
 // Login route
 router.post('/login', authController.login);
 
+// Read-only demo session
+router.post('/demo', authController.demo);
+
 // Get current user route (protected)
 router.get('/me', authController.protect, authController.getMe);
-router.put('/me', authController.protect, authController.updateMe);
+router.put('/me', authController.protect, authController.forbidDemo, authController.updateMe);
 
 module.exports = router;

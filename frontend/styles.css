@@ -1120,3 +1120,215 @@ a {
         gap: 8px;
     }
 }
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* In-page messages (toasts) */
+.toast-region {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: min(420px, calc(100vw - 32px));
+}
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px 12px 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    background: var(--text-main);
+    color: #fff;
+    border-left: 4px solid var(--accent-green);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    animation: toast-in 0.2s ease-out;
+}
+.toast span {
+    flex: 1;
+}
+.toast-error {
+    border-left-color: #e5533d;
+}
+.toast-info {
+    border-left-color: #8fb8a3;
+}
+.toast.leaving {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.toast-close {
+    background: none;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+}
+.toast-close:hover {
+    opacity: 1;
+}
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* Read-only demo */
+.demo-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    background: var(--bg-light);
+    border: 1px solid #d6ece2;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: var(--primary-green);
+}
+.demo-banner[hidden] {
+    display: none;
+}
+.demo-banner a {
+    color: var(--primary-green);
+    font-weight: 600;
+    text-decoration: underline;
+}
+.demo-mode .history-delete {
+    display: none;
+}
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.settings-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+/* Landing and auth pages: tablet and phone layout */
+@media (max-width: 900px) {
+    .navbar {
+        padding: 16px;
+        gap: 12px;
+    }
+    .nav-left, .nav-right {
+        width: auto;
+        gap: 16px;
+    }
+    .nav-left {
+        order: 2;
+    }
+    .nav-center {
+        flex: 0 0 auto;
+        order: 1;
+    }
+    .nav-right {
+        order: 3;
+    }
+    h1 {
+        font-size: 2.6rem;
+    }
+    h2,
+    .about-section h2 {
+        font-size: 2rem;
+    }
+    .about-section {
+        padding: 72px 16px;
+    }
+    .contact-section {
+        padding: 64px 16px;
+    }
+    .dashboard-preview-container {
+        height: 420px;
+    }
+    .footer {
+        padding: 48px 16px 24px;
+    }
+}
+
+@media (max-width: 600px) {
+    .navbar {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .nav-left, .nav-right {
+        justify-content: center;
+    }
+    .nav-center {
+        flex-basis: 100%;
+    }
+    .nav-left a, .nav-right a {
+        font-size: 0.85rem;
+    }
+    h1,
+    .auth-container h1 {
+        font-size: 2.1rem;
+    }
+    h2,
+    .about-section h2 {
+        font-size: 1.6rem;
+    }
+    /* Line breaks are tuned for desktop widths */
+    .hero-content br,
+    .about-section br,
+    .auth-container br {
+        display: none;
+    }
+    .hero-section {
+        padding: 40px 16px 0;
+    }
+    .hero-content {
+        margin-bottom: 40px;
+    }
+    .hero-content p,
+    .about-section p {
+        font-size: 1rem;
+    }
+    .hero-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .hero-buttons .btn {
+        text-align: center;
+    }
+    .dashboard-preview-container {
+        height: 240px;
+    }
+    .contact-form-container {
+        padding: 20px;
+        margin-top: 32px;
+    }
+    .footer-top,
+    .footer-bottom {
+        flex-direction: column;
+        gap: 16px;
+    }
+    .footer-top {
+        margin-bottom: 32px;
+    }
+    .auth-page {
+        padding: 32px 16px;
+        align-items: flex-start;
+    }
+    .toast-region {
+        right: 16px;
+        left: 16px;
+        bottom: 16px;
+        max-width: none;
+    }
+}

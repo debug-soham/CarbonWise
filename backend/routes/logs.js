@@ -7,10 +7,10 @@ const authController = require('../controllers/authController');
 router.use(authController.protect);
 
 router.get('/', logController.listLogs);
-router.post('/', logController.addLog);
+router.post('/', authController.forbidDemo, logController.addLog);
 router.get('/metrics', logController.getMetrics);
 router.get('/series', logController.getSeries);
 router.get('/factors', logController.getFactors);
-router.delete('/:id', logController.deleteLog);
+router.delete('/:id', authController.forbidDemo, logController.deleteLog);
 
 module.exports = router;

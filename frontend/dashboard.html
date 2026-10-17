@@ -27,6 +27,11 @@
         <!-- Main Content -->
         <div class="app-main">
 
+            <div id="demo-banner" class="demo-banner" hidden>
+                <span>You're exploring a read-only demo with sample data.</span>
+                <a href="register.html">Create your free account</a>
+            </div>
+
             <!-- Dashboard Tab -->
             <div id="tab-dashboard" class="tab-content active">
                 <div class="page-header">
@@ -281,13 +286,15 @@
                 <div class="settings-grid">
                     <div class="settings-card">
                         <h3>Profile</h3>
-                        <p style="color: var(--text-muted);" id="profile-name"></p>
-                        <p style="color: var(--text-muted);" id="profile-email"></p>
+                        <label for="input-profile-name" class="settings-label">Name</label>
+                        <input type="text" id="input-profile-name" maxlength="60" autocomplete="name" style="width:100%; margin-bottom:8px;">
+                        <p style="color: var(--text-muted); font-size: 0.8rem;" id="profile-email"></p>
+                        <button id="btn-save-profile" class="btn btn-primary" style="padding: 6px 16px; margin-top: 12px; font-size: 0.9rem;">Save</button>
                     </div>
                     <div class="settings-card">
                         <h3>Impact goals</h3>
-                        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 8px;">Monthly sustainable limit</p>
-                        <input type="number" id="input-monthly-limit" value="400" style="width:100%; margin-bottom:8px;">
+                        <label for="input-monthly-limit" class="settings-label">Monthly sustainable limit</label>
+                        <input type="number" id="input-monthly-limit" value="400" min="1" step="any" style="width:100%; margin-bottom:8px;">
                         <p style="color: var(--text-muted); font-size: 0.8rem;">kg CO<sub>2</sub>e per month</p>
                         <button id="btn-save-settings" class="btn btn-primary" style="padding: 6px 16px; margin-top: 12px; font-size: 0.9rem;">Save</button>
                     </div>

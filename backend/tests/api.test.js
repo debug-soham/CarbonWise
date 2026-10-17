@@ -268,3 +268,75 @@ test('history lists own logs newest first, filters, and deletes', async () => {
     assert.equal((await api('GET', '/api/logs', { token })).data.logs.length, 1);
     assert.equal((await api('GET', '/api/logs', { token: other })).data.logs.length, 1);
 });
+
+// ---------- Profile and demo ----------
+
+test('name can be updated with validation', async () => {
+    const token = await registerUser('rename@example.com');
+
+    let r = await api('PUT', '/api/auth/me', { token, body: { name: '  New Name  ' } });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.user.name, 'New Name');
+    assert.equal((await api('GET', '/api/auth/me', { token })).data.user.name, 'New Name');
+
+    assert.equal((await api('PUT', '/api/auth/me', { token, body: { name: '   ' } })).status, 400);
+    assert.equal((await api('PUT', '/api/auth/me', { token, body: { name: 'x'.repeat(61) } })).status, 400);
+    assert.equal((await api('PUT', '/api/auth/me', { token, body: {} })).status, 400);
+
+    // Both fields at once
+    r = await api('PUT', '/api/auth/me', { token, body: { name: 'Both', monthly_limit: 300 } });
+    assert.equal(r.data.user.name, 'Both');
+    assert.equal(r.data.user.monthly_limit, 300);
+});
+
+test('demo account: sample history, read-only, one shared user', async () => {
+    const first = await api('POST', '/api/auth/demo');
+    assert.equal(first.status, 200);
+    assert.equal(first.data.user.is_demo, true);
+    const token = first.data.token;
+
+    // Six months of history up to yesterday
+    const history = await api('GET', '/api/logs?limit=200', { token });
+    assert.ok(history.data.logs.length > 100, `got ${history.data.logs.length} logs`);
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    assert.ok(history.data.logs.every(l => new Date(l.date) < startOfToday));
+    assert.equal((await api('GET', '/api/auth/me', { token })).data.user.is_demo, true);
+
+    // Writes are blocked
+    const blocked = [
+        await api('POST', '/api/logs', { token, body: { category: 'food', meal: 'vegan', count: 1 } }),
+        await api('DELETE', `/api/logs/${history.data.logs[0].id}`, { token }),
+        await api('PUT', '/api/auth/me', { token, body: { monthly_limit: 1 } })
+    ];
+    blocked.forEach(r => {
+        assert.equal(r.status, 403);
+        assert.match(r.data.message, /read-only/);
+    });
+
+    // Concurrent demo sign-ins share one user and don't duplicate data
+    const [a, b] = await Promise.all([api('POST', '/api/auth/demo'), api('POST', '/api/auth/demo')]);
+    assert.equal(a.data.user.id, first.data.user.id);
+    assert.equal(b.data.user.id, first.data.user.id);
+    const again = await api('GET', '/api/logs?limit=200', { token });
+    assert.equal(again.data.logs.length, history.data.logs.length);
+
+    // Nobody can register the reserved demo address
+    const squat = await api('POST', '/api/auth/register', { body: { name: 'X', email: 'demo@carbonwise.invalid', password: 'password123' } });
+    assert.equal(squat.status, 400);
+});
+
+test('stale demo data is regenerated up to yesterday', async () => {
+    const { token, user } = (await api('POST', '/api/auth/demo')).data;
+    const Log = mongoose.model('Log');
+
+    // Simulate a demo last refreshed a week ago
+    await Log.deleteMany({ user: user.id, date: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } });
+    const before = await Log.findOne({ user: user.id }).sort({ date: -1 });
+    assert.ok(before.date < new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+
+    await api('POST', '/api/auth/demo');
+    const after = await Log.findOne({ user: user.id }).sort({ date: -1 });
+    const startOfYesterday = new Date(); startOfYesterday.setHours(0, 0, 0, 0); startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+    assert.ok(after.date >= startOfYesterday, `newest demo log ${after.date.toISOString()}`);
+    assert.equal((await api('GET', '/api/auth/me', { token })).status, 200);
+});

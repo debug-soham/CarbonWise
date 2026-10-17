@@ -19,21 +19,21 @@
                 <span>CARBONWISE</span>
             </a>
 
-            <h1>Start making<br>impact personal</h1>
-            <p class="subtitle">Set up your dashboard and turn everyday<br>choices into meaningful progress.</p>
+            <h1>Start making <br>impact personal</h1>
+            <p class="subtitle">Set up your dashboard and turn everyday <br>choices into meaningful progress.</p>
 
             <form class="auth-form" id="register-form">
                 <div class="form-group">
-                    <label>Full name</label>
-                    <input type="text" id="reg-name" placeholder="Your name" required>
+                    <label for="reg-name">Full name</label>
+                    <input type="text" id="reg-name" placeholder="Your name" autocomplete="name" maxlength="60" required>
                 </div>
                 <div class="form-group">
-                    <label>Email address</label>
-                    <input type="email" id="reg-email" placeholder="you@example.com" required>
+                    <label for="reg-email">Email address</label>
+                    <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email" required>
                 </div>
                 <div class="form-group">
-                    <label>Create password</label>
-                    <input type="password" id="reg-password" placeholder="At least 8 characters" required minlength="8">
+                    <label for="reg-password">Create password</label>
+                    <input type="password" id="reg-password" placeholder="At least 8 characters" autocomplete="new-password" required minlength="8">
                 </div>
                 <button type="submit" class="btn btn-primary btn-submit">Create account</button>
             </form>
