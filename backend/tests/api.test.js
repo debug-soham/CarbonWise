@@ -361,3 +361,20 @@ test('input limits are enforced per entry', async () => {
     assert.equal((await log(token, { category: 'transport', mode: 'flight', distance: 20000 })).status, 201);
     assert.equal((await log(token, { category: 'energy', electricity: 2000 })).status, 201);
 });
+
+test('at most 50 entries per day', async () => {
+    const token = await registerUser('daily-cap@example.com');
+    const now = new Date();
+    const yesterdayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 12).toISOString();
+    const entry = { category: 'food', meal: 'vegan', count: 1, date: yesterdayNoon };
+
+    const results = await Promise.all(Array.from({ length: 50 }, () => log(token, entry)));
+    assert.ok(results.every(r => r.status === 201), 'first 50 entries accepted');
+
+    const over = await log(token, entry);
+    assert.equal(over.status, 429);
+    assert.equal(over.data.message, 'You can log at most 50 entries per day.');
+
+    // A different day is unaffected
+    assert.equal((await log(token, { category: 'food', meal: 'vegan', count: 1 })).status, 201);
+});

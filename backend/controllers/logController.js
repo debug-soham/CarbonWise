@@ -2,9 +2,11 @@ const mongoose = require('mongoose');
 const Log = require('../models/Log');
 const User = require('../models/User');
 const { FACTORS, CATEGORIES, calculate, ValidationError } = require('../emissions');
+const { dayBoundsUtc } = require('../timeZone');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_BACKDATE_DAYS = 365 * 2;
+const MAX_ENTRIES_PER_DAY = 50;
 
 const toPublicLog = (log) => ({
     id: log.id,
@@ -60,6 +62,13 @@ exports.addLog = async (req, res) => {
             if (date.getTime() < Date.now() - MAX_BACKDATE_DAYS * DAY_MS) {
                 throw new ValidationError('Date is too far in the past.');
             }
+        }
+
+        // Stops scripted spam: at most 50 entries dated on any one calendar day
+        const { start, end } = dayBoundsUtc(date);
+        const sameDay = await Log.countDocuments({ user: req.user.id, date: { $gte: start, $lt: end } });
+        if (sameDay >= MAX_ENTRIES_PER_DAY) {
+            return res.status(429).json({ message: `You can log at most ${MAX_ENTRIES_PER_DAY} entries per day.` });
         }
 
         const log = await Log.create({ user: req.user.id, category, details, description, co2_impact, date });
