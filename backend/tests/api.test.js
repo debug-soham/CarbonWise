@@ -340,3 +340,24 @@ test('stale demo data is regenerated up to yesterday', async () => {
     assert.ok(after.date >= startOfYesterday, `newest demo log ${after.date.toISOString()}`);
     assert.equal((await api('GET', '/api/auth/me', { token })).status, 200);
 });
+
+// ---------- Input limits ----------
+
+test('input limits are enforced per entry', async () => {
+    const token = await registerUser('limits@example.com');
+    const rejected = [
+        { category: 'energy', electricity: 2001 },
+        { category: 'energy', lpg: 31 },
+        { category: 'energy', png: 301 },
+        { category: 'transport', mode: 'bus', distance: 2001 },
+        { category: 'transport', mode: 'flight', distance: 20001 },
+        { category: 'food', meal: 'vegan', count: 11 },
+        { category: 'shopping', item: 'book', quantity: 21 }
+    ];
+    for (const body of rejected) {
+        const r = await log(token, body);
+        assert.equal(r.status, 400, `expected 400 for ${JSON.stringify(body)}, got ${r.status}`);
+    }
+    assert.equal((await log(token, { category: 'transport', mode: 'flight', distance: 20000 })).status, 201);
+    assert.equal((await log(token, { category: 'energy', electricity: 2000 })).status, 201);
+});

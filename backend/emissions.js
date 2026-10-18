@@ -50,6 +50,19 @@ const FACTORS = {
 
 const CATEGORIES = Object.keys(FACTORS);
 
+// Largest value accepted for a single entry. Generous for real use, tight
+// enough that one entry can't add an absurd amount of CO2e.
+const LIMITS = {
+    electricity: 2000,       // kWh, a large monthly bill
+    lpg: 30,                 // kg, two cylinders
+    png: 300,                // m³
+    flightDistance: 20000,   // km, a long-haul return trip
+    distance: 2000,          // km, any other mode
+    count: 10,               // meals
+    quantity: 20,            // shopping items
+    passengers: 10
+};
+
 class ValidationError extends Error {}
 
 // Parse an optional numeric input; blank means 0
@@ -78,9 +91,9 @@ function calculate(category, input) {
     switch (category) {
         case 'energy': {
             const f = FACTORS.energy;
-            const electricity = readNumber(input.electricity, 'Electricity usage', { max: 100000 });
-            const lpg = readNumber(input.lpg, 'LPG usage', { max: 10000 });
-            const png = readNumber(input.png, 'Natural gas usage', { max: 100000 });
+            const electricity = readNumber(input.electricity, 'Electricity usage', { max: LIMITS.electricity });
+            const lpg = readNumber(input.lpg, 'LPG usage', { max: LIMITS.lpg });
+            const png = readNumber(input.png, 'Natural gas usage', { max: LIMITS.png });
             const renewable = input.renewable === true || input.renewable === 'true';
 
             if (electricity === 0 && lpg === 0 && png === 0) {
@@ -103,10 +116,12 @@ function calculate(category, input) {
         }
         case 'transport': {
             const mode = pick(FACTORS.transport, input.mode, 'transport mode');
-            const distance = readNumber(input.distance, 'Distance', { max: 50000 });
+            const distance = readNumber(input.distance, 'Distance', {
+                max: input.mode === 'flight' ? LIMITS.flightDistance : LIMITS.distance
+            });
             if (distance === 0) throw new ValidationError('Enter the distance travelled.');
             const passengers = mode.perVehicle
-                ? Math.max(1, readNumber(input.passengers, 'Passengers', { max: 10, integer: true }))
+                ? Math.max(1, readNumber(input.passengers, 'Passengers', { max: LIMITS.passengers, integer: true }))
                 : 1;
 
             return {
@@ -117,7 +132,7 @@ function calculate(category, input) {
         }
         case 'food': {
             const meal = pick(FACTORS.food, input.meal, 'meal type');
-            const count = readNumber(input.count, 'Number of meals', { max: 100, integer: true });
+            const count = readNumber(input.count, 'Number of meals', { max: LIMITS.count, integer: true });
             if (count === 0) throw new ValidationError('Enter how many meals.');
 
             return {
@@ -128,7 +143,7 @@ function calculate(category, input) {
         }
         case 'shopping': {
             const item = pick(FACTORS.shopping, input.item, 'item');
-            const quantity = readNumber(input.quantity, 'Quantity', { max: 100, integer: true });
+            const quantity = readNumber(input.quantity, 'Quantity', { max: LIMITS.quantity, integer: true });
             if (quantity === 0) throw new ValidationError('Enter a quantity.');
 
             return {
@@ -142,4 +157,4 @@ function calculate(category, input) {
     }
 }
 
-module.exports = { FACTORS, CATEGORIES, calculate, ValidationError };
+module.exports = { FACTORS, CATEGORIES, LIMITS, calculate, ValidationError };
