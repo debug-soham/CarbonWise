@@ -466,3 +466,84 @@ test('admin routes need an admin', async () => {
         process.env.ADMIN_EMAILS = saved;
     }
 });
+
+async function adminToken() {
+    const r = await api('POST', '/api/auth/login', { body: { email: 'admin@example.com', password: 'password123' } });
+    assert.equal(r.status, 200);
+    return r.data.token;
+}
+
+test('admin can exclude, trust, reset and dismiss', async () => {
+    const admin = await adminToken();
+    statsService.invalidate();
+    const before = (await api('GET', '/api/stats/public')).data.total_tonnes;
+
+    const userA = await mongoose.connection.collection('users').findOne({ email: 'stats-a@example.com' });
+    const id = String(userA._id);
+
+    let r = await api('PATCH', `/api/admin/users/${id}`, { token: admin, body: { stats_status: 'excluded' } });
+    assert.equal(r.status, 200);
+    const listed = (await api('GET', '/api/admin/users?search=stats-a', { token: admin })).data.users;
+    assert.equal(listed[0].status, 'excluded');
+    // The cache was cleared, so the public figure drops straight away
+    assert.ok((await api('GET', '/api/stats/public')).data.total_tonnes < before);
+
+    assert.equal((await api('PATCH', `/api/admin/users/${id}`, { token: admin, body: { stats_status: 'bogus' } })).status, 400);
+    assert.equal((await api('PATCH', `/api/admin/users/${id}`, { token: admin, body: { stats_status: 'trusted' } })).status, 200);
+    assert.equal((await api('PATCH', `/api/admin/users/${id}`, { token: admin, body: { stats_status: 'auto' } })).status, 200);
+
+    const demoUser = await mongoose.connection.collection('users').findOne({ is_demo: true });
+    const demoPatch = await api('PATCH', `/api/admin/users/${demoUser._id}`, { token: admin, body: { stats_status: 'trusted' } });
+    assert.equal(demoPatch.status, 400);
+    assert.equal(demoPatch.data.message, "The demo account's status can't be changed");
+
+    assert.equal((await api('PATCH', '/api/admin/users/not-an-id', { token: admin, body: { stats_status: 'auto' } })).status, 404);
+    assert.equal((await api('PATCH', '/api/admin/users/64b000000000000000000000', { token: admin, body: { stats_status: 'auto' } })).status, 404);
+
+    assert.equal((await api('POST', `/api/admin/users/${id}/dismiss-flags`, { token: admin })).status, 200);
+    const after = await mongoose.connection.collection('users').findOne({ _id: userA._id });
+    assert.ok(after.flags_dismissed_at instanceof Date);
+});
+
+test('flag queue lists a backdate burst', async () => {
+    const admin = await adminToken();
+    await registerUser('burst@example.com');
+    await ageAccount('burst@example.com', 30);
+    const burstUser = await mongoose.connection.collection('users').findOne({ email: 'burst@example.com' });
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    await mongoose.connection.collection('logs').insertMany(Array.from({ length: 60 }, () => ({
+        user: burstUser._id, category: 'food', details: {}, description: '', co2_impact: 0.5, date: tenDaysAgo, createdAt: new Date()
+    })));
+
+    const flags = (await api('GET', '/api/admin/flags', { token: admin })).data;
+    const entry = flags.find(f => f.user.email === 'burst@example.com');
+    assert.ok(entry, 'burst user is in the flag queue');
+    assert.equal(entry.flags[0].code, 'backdate_burst');
+    assert.equal(entry.user.entries, 60);
+    assert.ok((await api('GET', '/api/admin/overview', { token: admin })).data.counts.flagged >= 1);
+});
+
+test('user search and filter', async () => {
+    const admin = await adminToken();
+    let r = await api('GET', '/api/admin/users?search=MIXED', { token: admin });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.data.users.map(u => u.email), ['mixed@example.com']);
+    assert.equal(r.data.page, 1);
+
+    r = await api('GET', '/api/admin/users?search=a%2Bb(', { token: admin });
+    assert.equal(r.status, 200);
+
+    await api('PATCH', `/api/admin/users/${(await mongoose.connection.collection('users').findOne({ email: 'stats-c@example.com' }))._id}`, { token: admin, body: { stats_status: 'excluded' } });
+    r = await api('GET', '/api/admin/users?status=excluded', { token: admin });
+    assert.ok(r.data.users.length >= 1);
+    assert.ok(r.data.users.every(u => u.status === 'excluded'));
+
+    assert.equal((await api('GET', '/api/admin/users?status=nope', { token: admin })).status, 400);
+
+    // Rows carry what the admin table shows; the demo row is marked
+    const all = (await api('GET', '/api/admin/users', { token: admin })).data;
+    const row = all.users.find(u => u.email === 'stats-a@example.com');
+    assert.deepEqual(Object.keys(row).sort(), ['created_at', 'email', 'entries', 'id', 'is_demo', 'last_active', 'name', 'status']);
+    assert.equal(row.entries, 6);
+    assert.ok(all.users.some(u => u.is_demo && u.status === 'demo'));
+});

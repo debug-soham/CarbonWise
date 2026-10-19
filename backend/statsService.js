@@ -56,8 +56,53 @@ async function getAdminOverview(now = new Date()) {
     };
 }
 
+const PAGE_SIZE = 50;
+
+function summary(user, logs) {
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        created_at: user.createdAt,
+        entries: logs.length
+    };
+}
+
+async function getFlaggedUsers(now = new Date()) {
+    const accounts = await loadWithStatus(now);
+    return accounts
+        .filter(({ status }) => status === 'flagged')
+        .map(({ user, logs }) => ({ user: summary(user, logs), flags: stats.computeFlags(user, logs, now) }));
+}
+
+// Newest accounts first; search matches name or email as plain text
+async function listUsers({ search = '', status = '', page = 1 } = {}, now = new Date()) {
+    const needle = String(search).trim().toLowerCase();
+    const entries = await loadUsersWithLogs();
+
+    const rows = entries
+        .map(({ user, logs }) => ({
+            ...summary(user, logs),
+            last_active: logs.reduce((latest, log) => (!latest || log.date > latest ? log.date : latest), null),
+            status: stats.userStatus(user, logs, now),
+            is_demo: Boolean(user.is_demo)
+        }))
+        .filter(row => !needle || row.name.toLowerCase().includes(needle) || row.email.toLowerCase().includes(needle))
+        .filter(row => !status || row.status === status)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    const current = Math.min(Math.max(1, page), pages);
+    return {
+        users: rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE),
+        page: current,
+        pages,
+        total: rows.length
+    };
+}
+
 function invalidate() {
     cache = null;
 }
 
-module.exports = { STATUSES, loadUsersWithLogs, getPublicStats, getAdminOverview, invalidate };
+module.exports = { STATUSES, loadUsersWithLogs, getPublicStats, getAdminOverview, getFlaggedUsers, listUsers, invalidate };
