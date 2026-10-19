@@ -4,6 +4,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const logRoutes = require('./routes/logs');
 const statsRoutes = require('./routes/stats');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use((req, res, next) => { req.body = req.body || {}; next(); });
 app.use('/api/auth', authRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 // Root endpoint

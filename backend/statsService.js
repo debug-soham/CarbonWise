@@ -33,8 +33,31 @@ async function getPublicStats(now = new Date()) {
     return value;
 }
 
+const STATUSES = ['counted', 'new', 'flagged', 'excluded', 'trusted'];
+
+// Every account except the demo, with its status computed once
+async function loadWithStatus(now) {
+    const entries = await loadUsersWithLogs();
+    return entries
+        .filter(({ user }) => !user.is_demo)
+        .map(entry => ({ ...entry, status: stats.userStatus(entry.user, entry.logs, now) }));
+}
+
+async function getAdminOverview(now = new Date()) {
+    const accounts = await loadWithStatus(now);
+    const counts = { users: accounts.length, ...Object.fromEntries(STATUSES.map(s => [s, 0])) };
+    accounts.forEach(({ status }) => { counts[status]++; });
+
+    return {
+        public: await getPublicStats(now),
+        // No cap, no eligibility, no exclusions (the demo is still left out)
+        raw: stats.computeMetrics(accounts, { capped: false, now }),
+        counts
+    };
+}
+
 function invalidate() {
     cache = null;
 }
 
-module.exports = { loadUsersWithLogs, getPublicStats, invalidate };
+module.exports = { STATUSES, loadUsersWithLogs, getPublicStats, getAdminOverview, invalidate };

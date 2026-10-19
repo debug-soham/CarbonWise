@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Log = require('../models/Log');
 const { buildSampleLogs } = require('../sampleData');
+const { isAdminEmail } = require('./adminController');
 
 const JWT_SECRET = process.env.JWT_SECRET || (() => {
     if (process.env.NODE_ENV === 'production') {
@@ -128,7 +129,7 @@ exports.getMe = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.json({ user: toPublicUser(user) });
+        res.json({ user: { ...toPublicUser(user), is_admin: !user.is_demo && isAdminEmail(user.email) } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error.' });

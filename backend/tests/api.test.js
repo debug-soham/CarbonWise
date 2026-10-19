@@ -2,6 +2,8 @@
 // Uses TEST_MONGODB_URI, or MONGODB_URI with the database renamed to
 // "carbonwise_test". The test database is dropped when the run finishes.
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), quiet: true });
+// Messy on purpose: admin emails are trimmed and compared case-insensitively
+process.env.ADMIN_EMAILS = ' Admin@Example.com , other@x.com';
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -432,4 +434,35 @@ test('public stats are cached', async () => {
     const second = await api('GET', '/api/stats/public');
     assert.equal(second.data.updated_at, first.data.updated_at);
     assert.equal(second.data.total_tonnes, first.data.total_tonnes);
+});
+
+// ---------- Admin ----------
+
+test('admin routes need an admin', async () => {
+    assert.equal((await api('GET', '/api/admin/overview')).status, 401);
+
+    const user = await registerUser('not-admin@example.com');
+    assert.equal((await api('GET', '/api/admin/overview', { token: user })).status, 403);
+    assert.equal((await api('GET', '/api/auth/me', { token: user })).data.user.is_admin, false);
+
+    const demo = (await api('POST', '/api/auth/demo')).data.token;
+    assert.equal((await api('GET', '/api/admin/overview', { token: demo })).status, 403);
+
+    const admin = await registerUser('admin@example.com');
+    assert.equal((await api('GET', '/api/auth/me', { token: admin })).data.user.is_admin, true);
+    const overview = await api('GET', '/api/admin/overview', { token: admin });
+    assert.equal(overview.status, 200);
+    assert.deepEqual(Object.keys(overview.data.counts).sort(), ['counted', 'excluded', 'flagged', 'new', 'trusted', 'users']);
+    assert.equal(typeof overview.data.public.total_tonnes, 'number');
+    assert.equal(typeof overview.data.raw.total_tonnes, 'number');
+    // Raw ignores caps and eligibility, so it is never below the public figure
+    assert.ok(overview.data.raw.total_tonnes >= overview.data.public.total_tonnes);
+
+    const saved = process.env.ADMIN_EMAILS;
+    process.env.ADMIN_EMAILS = '';
+    try {
+        assert.equal((await api('GET', '/api/admin/overview', { token: admin })).status, 403);
+    } finally {
+        process.env.ADMIN_EMAILS = saved;
+    }
 });
