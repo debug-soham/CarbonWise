@@ -378,3 +378,58 @@ test('at most 50 entries per day', async () => {
     // A different day is unaffected
     assert.equal((await log(token, { category: 'food', meal: 'vegan', count: 1 })).status, 201);
 });
+
+// ---------- Public stats ----------
+
+const statsService = require('../statsService');
+
+// Mongoose timestamps protect createdAt, so age accounts through the raw driver
+async function ageAccount(email, days) {
+    await mongoose.connection.collection('users').updateOne(
+        { email },
+        { $set: { createdAt: new Date(Date.now() - days * 24 * 60 * 60 * 1000) } }
+    );
+}
+
+// 5 entries of 2 kg (4 vegan meals) on 5 distinct days last month = 10 kg
+async function logLastMonth(token) {
+    const now = new Date();
+    for (let day = 2; day <= 6; day++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - 1, day, 12).toISOString();
+        const r = await log(token, { category: 'food', meal: 'vegan', count: 4, date });
+        assert.equal(r.status, 201);
+    }
+}
+
+test('public stats count only eligible, unflagged, non-demo users', async () => {
+    statsService.invalidate();
+    const a = await registerUser('stats-a@example.com');
+    const b = await registerUser('stats-b@example.com');
+    const c = await registerUser('stats-c@example.com');
+    for (const token of [a, b, c]) await logLastMonth(token);
+    await ageAccount('stats-a@example.com', 30);
+    await ageAccount('stats-b@example.com', 3);
+    await ageAccount('stats-c@example.com', 30);
+    await mongoose.connection.collection('users').updateOne({ email: 'stats-c@example.com' }, { $set: { stats_status: 'excluded' } });
+    await api('POST', '/api/auth/demo');
+
+    const r = await api('GET', '/api/stats/public');
+    assert.equal(r.status, 200);
+    assert.equal(r.data.total_tonnes, 0.01);
+    assert.ok(!Number.isNaN(Date.parse(r.data.updated_at)));
+});
+
+test('trusted users count immediately', async () => {
+    await mongoose.connection.collection('users').updateOne({ email: 'stats-b@example.com' }, { $set: { stats_status: 'trusted' } });
+    statsService.invalidate();
+    assert.equal((await api('GET', '/api/stats/public')).data.total_tonnes, 0.02);
+});
+
+test('public stats are cached', async () => {
+    const first = await api('GET', '/api/stats/public');
+    const userA = await mongoose.connection.collection('users').findOne({ email: 'stats-a@example.com' });
+    await mongoose.model('Log').create({ user: userA._id, category: 'food', co2_impact: 1000, date: new Date() });
+    const second = await api('GET', '/api/stats/public');
+    assert.equal(second.data.updated_at, first.data.updated_at);
+    assert.equal(second.data.total_tonnes, first.data.total_tonnes);
+});
