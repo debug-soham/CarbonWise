@@ -46,6 +46,38 @@
         </div>
     </section>
 
+    <!-- IMPACT SECTION: live figures from /api/stats/public -->
+    <section class="impact-section" id="impact">
+        <span class="tag tag-green">Our impact</span>
+        <h2>What CarbonWise users are tracking</h2>
+
+        <div class="impact-grid">
+            <div class="impact-figure">
+                <div class="impact-value" id="impact-total">—</div>
+                <p>total emissions tracked by active CarbonWise users</p>
+            </div>
+            <div class="impact-figure">
+                <div class="impact-value" id="impact-change">—</div>
+                <p id="impact-change-label">typical change in monthly footprint</p>
+            </div>
+            <div class="impact-figure">
+                <div class="impact-value" id="impact-green">—</div>
+                <p>of logged days stayed within the user's daily budget</p>
+            </div>
+        </div>
+
+        <details class="impact-method" id="impact-method">
+            <summary><span id="impact-updated">Updated just now</span> · How we calculate these</summary>
+            <ul>
+                <li>Only active accounts count: at least 14 days old, with entries on 5 or more different days. Accounts trusted by an admin always count, and the demo account is never counted.</li>
+                <li>Accounts that look suspicious (a sudden spike, a burst of backdated entries, or repeated values at the input limits) are held back until an admin reviews them.</li>
+                <li>Each account contributes at most 2,000 kg CO₂e per month to the total, so no single account can inflate it.</li>
+                <li>Footprint change compares each user's latest complete month with the average of their first two complete months. We show the median across users, so one unusual account barely moves it.</li>
+                <li>A day is within budget when its total stays under the user's monthly limit divided by the days in that month.</li>
+            </ul>
+        </details>
+    </section>
+
     <!-- ABOUT US SECTION -->
     <section class="about-section" id="about">
         <span class="tag">About Us</span>

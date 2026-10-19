@@ -164,6 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     showFlash();
 
+    if (document.getElementById('impact')) loadImpact();
+
     // Auth Forms
     const registerForm = document.getElementById('register-form');
     if (registerForm) {
@@ -240,6 +242,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ---------- Landing page: live impact figures ----------
+
+function formatTonnes(tonnes) {
+    // Round first: toFixed alone turns 2.55 (stored as 2.5499…) into 2.5
+    const value = tonnes < 100 ? (Math.round(tonnes * 10) / 10).toFixed(1) : Math.round(tonnes).toLocaleString('en-US');
+    return `${value} t CO₂e`;
+}
+
+function formatAgo(iso) {
+    const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+}
+
+// Decorative, so no wake-up notice; on any failure the section is hidden
+async function loadImpact() {
+    const section = document.getElementById('impact');
+    try {
+        const response = await fetch(API_BASE_URL + '/api/stats/public');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+
+        setText('impact-total', formatTonnes(data.total_tonnes));
+
+        if (data.change_pct === null) {
+            setText('impact-change', '—');
+        } else {
+            const increase = data.change_pct > 0;
+            setText('impact-change', `${increase ? '▲' : '▼'} ${Math.abs(Math.round(data.change_pct))}%`);
+            setText('impact-change-label', `typical ${increase ? 'increase' : 'change'} in monthly footprint`);
+        }
+
+        setText('impact-green', data.green_days_pct === null ? '—' : `${Math.round(data.green_days_pct)}%`);
+        setText('impact-updated', `Updated ${formatAgo(data.updated_at)}`);
+    } catch (err) {
+        console.error('Could not load impact figures', err);
+        section.hidden = true;
+    }
+}
 
 async function submitAuth(form, path, body, busyLabel, welcomeMessage) {
     const button = form.querySelector('button[type="submit"]');
