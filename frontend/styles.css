@@ -1482,10 +1482,12 @@ html {
     line-height: 1.5;
 }
 .flag-actions,
+/* Stays a table cell so its border lines up with the rest of the row */
 .user-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    white-space: nowrap;
+}
+.user-actions .admin-action + .admin-action {
+    margin-left: 8px;
 }
 .admin-action {
     padding: 6px 12px;
@@ -1592,7 +1594,16 @@ html {
     }
     .admin-table td.user-actions {
         display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
         margin-top: 8px;
+        white-space: normal;
+    }
+    .admin-table td.user-actions .admin-action + .admin-action {
+        margin-left: 0;
+    }
+    .admin-table td.user-actions:empty {
+        display: none;
     }
     .admin-table td.user-name {
         font-weight: 600;
