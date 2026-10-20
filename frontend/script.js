@@ -345,6 +345,8 @@ function showUser(user) {
     const nameInput = document.getElementById('input-profile-name');
     if (nameInput && document.activeElement !== nameInput) nameInput.value = user.name;
     setText('profile-email', user.email);
+    const navAdmin = document.getElementById('nav-admin');
+    if (navAdmin) navAdmin.hidden = !user.is_admin;
 }
 
 // The shared demo account is read-only: explain that and switch off editing
