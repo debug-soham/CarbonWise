@@ -547,3 +547,26 @@ test('user search and filter', async () => {
     assert.equal(row.entries, 6);
     assert.ok(all.users.some(u => u.is_demo && u.status === 'demo'));
 });
+
+// ---------- Accounts created before stats_status existed ----------
+
+test('accounts without stats_status are treated as auto and can be flagged', async () => {
+    const admin = await adminToken();
+    // Raw insert: no stats_status or flags_dismissed_at, like production users created earlier
+    const { insertedId } = await mongoose.connection.collection('users').insertOne({
+        name: 'Legacy User', email: 'legacy@example.com', password: 'x', monthly_limit: 400, is_demo: false,
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), updatedAt: new Date()
+    });
+    const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
+    await mongoose.connection.collection('logs').insertMany(Array.from({ length: 60 }, () => ({
+        user: insertedId, category: 'food', details: {}, description: '', co2_impact: 0.5, date: tenDaysAgo, createdAt: new Date()
+    })));
+
+    const flags = (await api('GET', '/api/admin/flags', { token: admin })).data;
+    const entry = flags.find(f => f.user.email === 'legacy@example.com');
+    assert.ok(entry, 'legacy account is flagged');
+    assert.equal(entry.flags[0].code, 'backdate_burst');
+
+    const row = (await api('GET', '/api/admin/users?search=legacy@', { token: admin })).data.users[0];
+    assert.equal(row.status, 'flagged');
+});

@@ -17,7 +17,12 @@ async function loadUsersWithLogs() {
         const list = logsByUser.get(String(log.user));
         if (list) list.push(log);
     }
-    return users.map(u => ({ user: { ...u, id: String(u._id) }, logs: logsByUser.get(String(u._id)) }));
+    // .lean() skips schema defaults, and accounts created before these fields
+    // existed don't have them, so fill them in here
+    return users.map(u => ({
+        user: { stats_status: 'auto', flags_dismissed_at: null, ...u, id: String(u._id) },
+        logs: logsByUser.get(String(u._id))
+    }));
 }
 
 const isCounted = (status) => status === 'trusted' || status === 'counted';
