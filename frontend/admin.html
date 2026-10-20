@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarbonWise - Admin</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <div class="app-sidebar">
+            <a href="index.html" class="sidebar-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" fill="#1A1A1A"/>
+                </svg>
+            </a>
+            <div class="sidebar-menu">
+                <a class="nav-link active" data-target="tab-overview">Overview</a>
+                <a class="nav-link" data-target="tab-flags">Flags</a>
+                <a class="nav-link" data-target="tab-users">Users</a>
+                <a href="dashboard.html">Dashboard</a>
+            </div>
+        </div>
+
+        <div class="app-main">
+
+            <!-- Overview -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="page-header">
+                    <div>
+                        <h2>Admin</h2>
+                        <p>Review the accounts behind the public impact figures.</p>
+                    </div>
+                </div>
+
+                <div class="admin-metrics">
+                    <div class="stat-card">
+                        <div class="stat-card-title">total CO₂ tracked</div>
+                        <div class="admin-metric-public" id="ov-public-total">—</div>
+                        <div class="admin-metric-raw">raw: <span id="ov-raw-total">—</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">typical footprint change</div>
+                        <div class="admin-metric-public" id="ov-public-change">—</div>
+                        <div class="admin-metric-raw">raw: <span id="ov-raw-change">—</span></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-title">green days</div>
+                        <div class="admin-metric-public" id="ov-public-green">—</div>
+                        <div class="admin-metric-raw">raw: <span id="ov-raw-green">—</span></div>
+                    </div>
+                </div>
+                <p class="admin-note">Public figures are what the landing page shows. Raw figures include every account except the demo, with no monthly cap and no eligibility rules.</p>
+
+                <div class="admin-counts">
+                    <div class="stat-card"><div class="stat-card-title">accounts</div><div class="stat-card-value" id="count-users">—</div></div>
+                    <div class="stat-card"><div class="stat-card-title">counted</div><div class="stat-card-value" id="count-counted">—</div></div>
+                    <div class="stat-card"><div class="stat-card-title">new</div><div class="stat-card-value" id="count-new">—</div></div>
+                    <div class="stat-card"><div class="stat-card-title">flagged</div><div class="stat-card-value" id="count-flagged">—</div></div>
+                    <div class="stat-card"><div class="stat-card-title">excluded</div><div class="stat-card-value" id="count-excluded">—</div></div>
+                    <div class="stat-card"><div class="stat-card-title">trusted</div><div class="stat-card-value" id="count-trusted">—</div></div>
+                </div>
+            </div>
+
+            <!-- Flags -->
+            <div id="tab-flags" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h2>Flagged accounts</h2>
+                        <p>These accounts are left out of the public figures until you review them.</p>
+                    </div>
+                </div>
+                <div id="flags-list" class="flags-list">
+                    <p class="admin-empty">Loading…</p>
+                </div>
+            </div>
+
+            <!-- Users -->
+            <div id="tab-users" class="tab-content">
+                <div class="page-header">
+                    <div>
+                        <h2>Users</h2>
+                        <p>Exclude or trust accounts, or return them to the automatic rules.</p>
+                    </div>
+                </div>
+
+                <div class="admin-controls">
+                    <input type="search" id="user-search" placeholder="Search name or email" aria-label="Search users">
+                    <select id="user-status" aria-label="Filter by status">
+                        <option value="">All statuses</option>
+                        <option value="counted">Counted</option>
+                        <option value="new">New</option>
+                        <option value="flagged">Flagged</option>
+                        <option value="excluded">Excluded</option>
+                        <option value="trusted">Trusted</option>
+                    </select>
+                </div>
+
+                <table id="users-table" class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Joined</th>
+                            <th>Entries</th>
+                            <th>Last active</th>
+                            <th>Status</th>
+                            <th><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="admin-pager">
+                    <button type="button" class="btn btn-secondary" id="users-prev">Previous</button>
+                    <span id="users-page"></span>
+                    <button type="button" class="btn btn-secondary" id="users-next">Next</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
