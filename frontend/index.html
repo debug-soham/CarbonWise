@@ -69,11 +69,11 @@
         <details class="impact-method" id="impact-method">
             <summary><span id="impact-updated">Updated just now</span> · How we calculate these</summary>
             <ul>
-                <li>Only active accounts count: at least 14 days old, with entries on 5 or more different days. Accounts trusted by an admin always count, and the demo account is never counted.</li>
-                <li>Accounts that look suspicious (a sudden spike, a burst of backdated entries, or repeated values at the input limits) are held back until an admin reviews them.</li>
+                <li>Only active accounts count: at least 14 days old, with entries on 5 or more different days, and no flags waiting for review. Accounts trusted by an admin always count, and the demo account is never counted.</li>
+                <li>An account is flagged and held back until an admin reviews it when it shows a month over 4× its typical month (and over 300 kg), 60 or more backdated entries added within 24 hours, 5 or more entries near the input limits in 30 days, or a month above 2,000 kg.</li>
                 <li>Each account contributes at most 2,000 kg CO₂e per month to the total, so no single account can inflate it.</li>
-                <li>Footprint change compares each user's latest complete month with the average of their first two complete months. We show the median across users, so one unusual account barely moves it.</li>
-                <li>A day is within budget when its total stays under the user's monthly limit divided by the days in that month.</li>
+                <li>A complete month is one that has ended and has entries on at least 5 days. For users with at least 3 complete months, footprint change compares their latest complete month with the average of their first two. We show the median across users, so one unusual account barely moves it.</li>
+                <li>A day is within budget when its total is at most the user's monthly limit divided by the days in that month. Days and months are counted in India time.</li>
             </ul>
         </details>
     </section>
